@@ -189,7 +189,7 @@ function PageTreeItem({
                 setMoveUnderSubmenuOpen(false);
               }}
             >
-              <span>\uD83D\uDCC2</span> Move to project
+              <span>{'\uD83D\uDCC2'}</span> Move to project
               <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-tertiary)' }}>{'\u25B8'}</span>
             </button>
             {moveSubmenuOpen && (
@@ -201,7 +201,7 @@ function PageTreeItem({
                     closeMenu();
                   }}
                 >
-                  <span>\uD83D\uDCC4</span> None (uncategorized)
+                  <span>{'\uD83D\uDCC4'}</span> None (uncategorized)
                 </button>
                 {(allProjects || []).map((proj) => (
                   <button
@@ -226,7 +226,7 @@ function PageTreeItem({
                 setMoveSubmenuOpen(false);
               }}
             >
-              <span>\u21B3</span> Move under...
+              <span>{'\u21B3'}</span> Move under...
               <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-tertiary)' }}>{'\u25B8'}</span>
             </button>
             {moveUnderSubmenuOpen && (
@@ -238,7 +238,7 @@ function PageTreeItem({
                     closeMenu();
                   }}
                 >
-                  <span>\u2B06</span> Move to top level
+                  <span>{'\u2B06'}</span> Move to top level
                 </button>
                 {moveUnderCandidates.map((candidate) => (
                   <button
@@ -263,7 +263,7 @@ function PageTreeItem({
                 closeMenu();
               }}
             >
-              <span>\uD83D\uDDD1\uFE0F</span> Delete
+              <span>{'\uD83D\uDDD1\uFE0F'}</span> Delete
             </button>
           </div>
         </>

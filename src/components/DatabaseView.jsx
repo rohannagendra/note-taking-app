@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   createDatabase,
+  getDatabase,
   getPageDatabase,
   updateDatabase,
   getDatabaseRows,
   addDatabaseRow,
   updateDatabaseRow,
   deleteDatabaseRow,
+  deleteDatabase,
+  getAllDatabases,
 } from '../lib/database.js';
 import DatabaseTableView from './DatabaseTableView.jsx';
 import DatabaseBoardView from './DatabaseBoardView.jsx';
@@ -30,10 +33,12 @@ function generateId() {
   return 'prop_' + Math.random().toString(36).slice(2, 10);
 }
 
-export default function DatabaseView({ pageId, onNavigate }) {
+export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
   const [database, setDatabase] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLinkPicker, setShowLinkPicker] = useState(false);
+  const [availableDatabases, setAvailableDatabases] = useState([]);
   const [activeView, setActiveView] = useState('table');
   const [editingName, setEditingName] = useState(false);
   const [showAddProperty, setShowAddProperty] = useState(false);
@@ -49,13 +54,18 @@ export default function DatabaseView({ pageId, onNavigate }) {
   const nameRef = useRef(null);
   const saveTimer = useRef(null);
 
-  // Load database for this page
+  // Load database for this page (or linked database)
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const db = await getPageDatabase(pageId);
+        let db;
+        if (linkedDatabaseId) {
+          db = await getDatabase(linkedDatabaseId);
+        } else {
+          db = await getPageDatabase(pageId);
+        }
         if (cancelled) return;
         if (db) {
           const schema = typeof db.properties_schema === 'string'
@@ -78,7 +88,7 @@ export default function DatabaseView({ pageId, onNavigate }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [pageId]);
+  }, [pageId, linkedDatabaseId]);
 
   const handleCreate = useCallback(async () => {
     const db = await createDatabase(pageId, 'Untitled Database', DEFAULT_SCHEMA);
@@ -88,6 +98,13 @@ export default function DatabaseView({ pageId, onNavigate }) {
     setDatabase({ ...db, properties_schema: schema });
     setRows([]);
   }, [pageId]);
+
+  const handleDeleteDatabase = useCallback(async () => {
+    if (!database) return;
+    await deleteDatabase(database.id);
+    setDatabase(null);
+    setRows([]);
+  }, [database]);
 
   const handleUpdateName = useCallback(async () => {
     if (!database || !nameRef.current) return;
@@ -369,9 +386,62 @@ export default function DatabaseView({ pageId, onNavigate }) {
       <div className="database-container">
         <div className="database-empty">
           <button className="database-create-btn" onClick={handleCreate}>
-            + Add a database
+            + New database
+          </button>
+          <button
+            className="database-create-btn"
+            style={{ marginLeft: '8px' }}
+            onClick={async () => {
+              const dbs = await getAllDatabases();
+              // Exclude databases already on this page
+              setAvailableDatabases(dbs.filter((d) => d.page_id !== pageId));
+              setShowLinkPicker(true);
+            }}
+          >
+            Link existing database
           </button>
         </div>
+        {showLinkPicker && (
+          <div className="database-link-picker">
+            <div style={{ padding: '8px', fontWeight: 600, fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Select a database to link
+            </div>
+            {availableDatabases.length === 0 && (
+              <div style={{ padding: '8px', color: 'var(--text-placeholder)', fontSize: '13px' }}>
+                No other databases found
+              </div>
+            )}
+            {availableDatabases.map((db) => (
+              <button
+                key={db.id}
+                className="database-link-option"
+                onClick={async () => {
+                  setShowLinkPicker(false);
+                  // Load the linked database
+                  const schema = typeof db.properties_schema === 'string'
+                    ? JSON.parse(db.properties_schema)
+                    : db.properties_schema || [];
+                  setDatabase({ ...db, properties_schema: schema, isLinked: true });
+                  const loadedRows = await getDatabaseRows(db.id);
+                  setRows(loadedRows);
+                }}
+              >
+                <span style={{ marginRight: '6px' }}>{db.page_icon || '\uD83D\uDCC4'}</span>
+                {db.name}
+                <span style={{ marginLeft: '6px', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                  from {db.page_title || 'Untitled'}
+                </span>
+              </button>
+            ))}
+            <button
+              className="database-link-option"
+              style={{ color: 'var(--text-tertiary)' }}
+              onClick={() => setShowLinkPicker(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -442,6 +512,17 @@ export default function DatabaseView({ pageId, onNavigate }) {
               onClick={() => setShowAddProperty(true)}
             >
               + Property
+            </button>
+            <button
+              className="db-action-btn"
+              style={{ color: 'var(--red)' }}
+              onClick={() => {
+                if (window.confirm('Delete this database and all its rows? This cannot be undone.')) {
+                  handleDeleteDatabase();
+                }
+              }}
+            >
+              Delete DB
             </button>
           </div>
         </div>

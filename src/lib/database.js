@@ -47,3 +47,7 @@ export async function deleteDatabaseRow(rowId) {
 export async function getPageDatabase(pageId) {
   return apiFetch(`/pages/${pageId}/database`);
 }
+
+export async function getAllDatabases() {
+  return apiFetch('/databases');
+}

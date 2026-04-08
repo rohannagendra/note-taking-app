@@ -975,6 +975,21 @@ export function createRoutes(db) {
 
   // ============ DATABASES ============
 
+  // GET /api/databases — list all databases with page info
+  router.get('/databases', async (req, res) => {
+    try {
+      const result = await db.query(
+        `SELECT d.*, p.title as page_title, p.icon as page_icon
+         FROM databases d
+         LEFT JOIN pages p ON d.page_id = p.id
+         ORDER BY d.created_at DESC`
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /api/databases — create a database for a page
   router.post('/databases', async (req, res) => {
     try {

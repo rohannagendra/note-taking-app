@@ -3461,3 +3461,9 @@ body {
 .select-cell-empty { color: var(--text-placeholder); font-size: 12px; padding: 8px; text-align: center; }
 
 [data-theme="dark"] .select-cell-dropdown { background: #2f2f2f; border-color: rgba(255,255,255,0.1); }
+
+/* Database Link Picker */
+.database-link-picker { background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 6px; box-shadow: 0 3px 12px rgba(15,15,15,.15); padding: 4px; margin-top: 8px; max-width: 400px; }
+.database-link-option { display: flex; align-items: center; width: 100%; padding: 6px 10px; border: none; background: none; cursor: pointer; border-radius: 4px; font-size: 13px; color: var(--text-primary); text-align: left; }
+.database-link-option:hover { background: var(--bg-hover); }
+[data-theme="dark"] .database-link-picker { background: #2f2f2f; border-color: rgba(255,255,255,0.1); }
