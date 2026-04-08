@@ -157,6 +157,20 @@ export default function DatabaseView({ pageId, onNavigate }) {
     }
   }, [database, rows]);
 
+  const handleCreateOption = useCallback(async (propId, optionValue) => {
+    if (!database) return;
+    const newSchema = database.properties_schema.map((p) => {
+      if (p.id !== propId) return p;
+      const existingOptions = p.options || [];
+      if (existingOptions.some((o) => o.value === optionValue)) return p;
+      const colorIdx = existingOptions.length % 10;
+      const colors = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+      return { ...p, options: [...existingOptions, { value: optionValue, color: colors[colorIdx] }] };
+    });
+    await updateDatabase(database.id, { properties_schema: newSchema });
+    setDatabase((prev) => ({ ...prev, properties_schema: newSchema }));
+  }, [database]);
+
   const handleUpdateProperty = useCallback(async (propId, updates, meta) => {
     if (!database) return;
     const newSchema = database.properties_schema.map((p) => {
@@ -565,6 +579,7 @@ export default function DatabaseView({ pageId, onNavigate }) {
           onSortBy={handleSortBy}
           sortProp={sortProp}
           sortDir={sortDir}
+          onCreateOption={handleCreateOption}
         />
       )}
       {activeView === 'board' && (

@@ -3440,3 +3440,24 @@ body {
 [data-theme="dark"] .db-th-add-property {
   border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* Select Cell Dropdown */
+.select-cell-wrapper { position: relative; width: 100%; min-height: 28px; }
+.select-cell-trigger { cursor: pointer; padding: 2px 4px; border-radius: 3px; min-height: 24px; display: flex; align-items: center; }
+.select-cell-trigger:hover { background: var(--bg-hover); }
+.select-cell-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 13px; white-space: nowrap; }
+.select-cell-placeholder { color: var(--text-placeholder); font-size: 13px; }
+.select-cell-dropdown { position: absolute; top: 100%; left: 0; z-index: 300; min-width: 200px; max-width: 300px; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: 6px; box-shadow: 0 3px 12px rgba(15,15,15,.15); padding: 4px; margin-top: 2px; }
+.select-cell-search { width: 100%; border: none; border-bottom: 1px solid var(--border-default); padding: 6px 8px; font-size: 13px; outline: none; background: transparent; color: var(--text-primary); }
+.select-cell-search::placeholder { color: var(--text-placeholder); }
+.select-cell-options { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+.select-cell-option { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; cursor: pointer; border-radius: 3px; font-size: 13px; }
+.select-cell-option:hover { background: var(--bg-hover); }
+.select-cell-option.active { background: var(--bg-active); }
+.select-cell-option-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 13px; }
+.select-cell-option-clear { color: var(--text-tertiary); font-size: 12px; padding: 4px 8px; }
+.select-cell-option-create { color: var(--text-secondary); }
+.select-cell-check { color: var(--accent-blue); font-size: 12px; }
+.select-cell-empty { color: var(--text-placeholder); font-size: 12px; padding: 8px; text-align: center; }
+
+[data-theme="dark"] .select-cell-dropdown { background: #2f2f2f; border-color: rgba(255,255,255,0.1); }

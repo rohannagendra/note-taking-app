@@ -44,6 +44,7 @@ export default function DatabaseTableView({
   onSortBy,
   sortProp,
   sortDir,
+  onCreateOption,
 }) {
   const saveTimers = useRef({});
   const [menuCol, setMenuCol] = useState(null);
@@ -289,6 +290,7 @@ export default function DatabaseTableView({
                       handleCheckboxChange,
                       handleSelectChange,
                       handleDateChange,
+                      onCreateOption,
                     })}
                   </td>
                 ))}
@@ -514,6 +516,119 @@ export default function DatabaseTableView({
   );
 }
 
+function SelectCell({ value, options, onChange, onCreateOption }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && inputRef.current) inputRef.current.focus();
+  }, [open]);
+
+  const filtered = (options || []).filter((o) =>
+    o.value.toLowerCase().includes(search.toLowerCase())
+  );
+  const exactMatch = options?.some((o) => o.value.toLowerCase() === search.trim().toLowerCase());
+  const currentOpt = options?.find((o) => o.value === value);
+
+  return (
+    <div className="select-cell-wrapper" ref={ref}>
+      <div className="select-cell-trigger" onClick={() => setOpen(!open)}>
+        {value ? (
+          <span
+            className="select-cell-tag"
+            style={{ background: SELECT_COLORS[currentOpt?.color] || SELECT_COLORS.default }}
+          >
+            {value}
+          </span>
+        ) : (
+          <span className="select-cell-placeholder">Select...</span>
+        )}
+      </div>
+      {open && (
+        <div className="select-cell-dropdown">
+          <input
+            ref={inputRef}
+            className="select-cell-search"
+            type="text"
+            placeholder="Search or create..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && search.trim()) {
+                if (filtered.length > 0) {
+                  onChange(filtered[0].value);
+                } else if (onCreateOption) {
+                  onCreateOption(search.trim());
+                  onChange(search.trim());
+                }
+                setSearch('');
+                setOpen(false);
+              }
+              if (e.key === 'Escape') {
+                setSearch('');
+                setOpen(false);
+              }
+            }}
+          />
+          <div className="select-cell-options">
+            {value && (
+              <div
+                className="select-cell-option select-cell-option-clear"
+                onClick={() => { onChange(''); setOpen(false); setSearch(''); }}
+              >
+                Clear
+              </div>
+            )}
+            {filtered.map((opt) => (
+              <div
+                key={opt.value}
+                className={'select-cell-option' + (opt.value === value ? ' active' : '')}
+                onClick={() => { onChange(opt.value); setOpen(false); setSearch(''); }}
+              >
+                <span
+                  className="select-cell-option-tag"
+                  style={{ background: SELECT_COLORS[opt.color] || SELECT_COLORS.default }}
+                >
+                  {opt.value}
+                </span>
+                {opt.value === value && <span className="select-cell-check">✓</span>}
+              </div>
+            ))}
+            {search.trim() && !exactMatch && onCreateOption && (
+              <div
+                className="select-cell-option select-cell-option-create"
+                onClick={() => {
+                  onCreateOption(search.trim());
+                  onChange(search.trim());
+                  setSearch('');
+                  setOpen(false);
+                }}
+              >
+                <span style={{ color: 'var(--accent-blue)', marginRight: '6px' }}>+</span>
+                Create "<strong>{search.trim()}</strong>"
+              </div>
+            )}
+            {filtered.length === 0 && !search.trim() && (
+              <div className="select-cell-empty">No options</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function renderCell(col, value, rowId, handlers) {
   switch (col.type) {
     case 'text':
@@ -540,18 +655,12 @@ function renderCell(col, value, rowId, handlers) {
       );
     case 'select':
       return (
-        <select
-          className="db-cell-select"
-          value={value || ''}
-          onChange={(e) => handlers.handleSelectChange(rowId, col.id, e.target.value)}
-        >
-          <option value="">--</option>
-          {(col.options || []).map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.value}
-            </option>
-          ))}
-        </select>
+        <SelectCell
+          value={value}
+          options={col.options || []}
+          onChange={(val) => handlers.handleSelectChange(rowId, col.id, val)}
+          onCreateOption={handlers.onCreateOption ? (optVal) => handlers.onCreateOption(col.id, optVal) : null}
+        />
       );
     case 'checkbox':
       return (
