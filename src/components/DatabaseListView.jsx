@@ -13,6 +13,19 @@ const SELECT_COLORS = {
   default: 'var(--tag-default)',
 };
 
+function parseMultiSelectValue(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) return parsed;
+  } catch (e) { /* not JSON */ }
+  if (typeof val === 'string' && val.trim()) {
+    return val.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 export default function DatabaseListView({
   schema,
   rows,
@@ -85,6 +98,27 @@ function renderListValue(col, value, rowId, onCheckboxToggle) {
           style={{ backgroundColor: SELECT_COLORS[color] || SELECT_COLORS.default }}
         >
           {value}
+        </span>
+      );
+    }
+    case 'multiselect': {
+      const vals = parseMultiSelectValue(value);
+      if (vals.length === 0) return <span className="db-list-prop-empty">--</span>;
+      return (
+        <span className="db-list-multiselect-tags">
+          {vals.map((v) => {
+            const opt = (col.options || []).find((o) => o.value === v);
+            const color = opt?.color || 'default';
+            return (
+              <span
+                key={v}
+                className="select-tag"
+                style={{ backgroundColor: SELECT_COLORS[color] || SELECT_COLORS.default, marginRight: '3px' }}
+              >
+                {v}
+              </span>
+            );
+          })}
         </span>
       );
     }

@@ -14,6 +14,19 @@ const SELECT_COLORS = {
   default: 'var(--tag-default)',
 };
 
+function parseMultiSelectValue(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try {
+    const parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) return parsed;
+  } catch (e) { /* not JSON */ }
+  if (typeof val === 'string' && val.trim()) {
+    return val.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 export default function DatabaseBoardView({
   schema,
   rows,
@@ -27,11 +40,11 @@ export default function DatabaseBoardView({
   const [commentCounts, setCommentCounts] = useState({});
   const dragCounter = useRef({});
 
-  // Find the grouping property — first select property, or 'status'
+  // Find the grouping property -- first select or multiselect property, or 'status'
   const groupProp = useMemo(() => {
-    const statusProp = schema.find((p) => p.id === 'status' && p.type === 'select');
+    const statusProp = schema.find((p) => p.id === 'status' && (p.type === 'select' || p.type === 'multiselect'));
     if (statusProp) return statusProp;
-    return schema.find((p) => p.type === 'select') || null;
+    return schema.find((p) => p.type === 'select' || p.type === 'multiselect') || null;
   }, [schema]);
 
   // Get the title property
@@ -46,23 +59,35 @@ export default function DatabaseBoardView({
     );
   }, [schema, groupProp, titleProp]);
 
-  // Group rows by the select property
+  // Group rows by the select/multiselect property
   const columns = useMemo(() => {
     if (!groupProp) {
       return [{ value: 'All', color: 'default', rows: rows }];
     }
     const options = groupProp.options || [];
+    const isMulti = groupProp.type === 'multiselect';
+
     const cols = options.map((opt) => ({
       value: opt.value,
       color: opt.color || 'default',
       rows: rows.filter((r) => {
         const val = r.properties?.[groupProp.id];
+        if (isMulti) {
+          const vals = parseMultiSelectValue(val);
+          // Card appears in the first matching column for simplicity
+          return vals.length > 0 && vals[0] === opt.value;
+        }
         return val === opt.value;
       }),
     }));
+
     // Add "No value" column for rows without the group property set
     const ungrouped = rows.filter((r) => {
       const val = r.properties?.[groupProp.id];
+      if (isMulti) {
+        const vals = parseMultiSelectValue(val);
+        return vals.length === 0;
+      }
       return !val || !options.some((o) => o.value === val);
     });
     if (ungrouped.length > 0) {
@@ -76,16 +101,18 @@ export default function DatabaseBoardView({
       onAddRow({});
       return;
     }
-    onAddRow({ [groupProp.id]: columnValue });
+    if (groupProp.type === 'multiselect') {
+      onAddRow({ [groupProp.id]: JSON.stringify(columnValue === 'No value' ? [] : [columnValue]) });
+    } else {
+      onAddRow({ [groupProp.id]: columnValue });
+    }
   }, [groupProp, onAddRow]);
 
   // --- Drag & Drop handlers ---
   const handleDragStart = useCallback((e, row, sourceColumnValue) => {
     setDraggedCard({ rowId: row.id, sourceColumn: sourceColumnValue });
     e.dataTransfer.effectAllowed = 'move';
-    // Set a minimal drag image data so the browser allows the drag
     e.dataTransfer.setData('text/plain', row.id);
-    // Add dragging class after a tick so the browser captures the element first
     requestAnimationFrame(() => {
       e.target.classList.add('dragging');
     });
@@ -133,16 +160,22 @@ export default function DatabaseBoardView({
       return;
     }
 
-    // Find the row and update its property
     const row = rows.find((r) => r.id === draggedCard.rowId);
     if (!row) {
       setDraggedCard(null);
       return;
     }
 
+    let newValue;
+    if (groupProp.type === 'multiselect') {
+      newValue = targetColumnValue === 'No value' ? '[]' : JSON.stringify([targetColumnValue]);
+    } else {
+      newValue = targetColumnValue === 'No value' ? '' : targetColumnValue;
+    }
+
     const updatedProperties = {
       ...row.properties,
-      [groupProp.id]: targetColumnValue === 'No value' ? '' : targetColumnValue,
+      [groupProp.id]: newValue,
     };
 
     onUpdateRow(row.id, updatedProperties);
@@ -152,8 +185,8 @@ export default function DatabaseBoardView({
   if (!groupProp) {
     return (
       <div className="database-board-no-select">
-        <p>Board view requires a Select property to group by.</p>
-        <p>Add a select property to use board view.</p>
+        <p>Board view requires a Select or Multi-select property to group by.</p>
+        <p>Add a select or multi-select property to use board view.</p>
       </div>
     );
   }
@@ -271,6 +304,27 @@ function renderPropValue(prop, value) {
           style={{ backgroundColor: SELECT_COLORS[color] || SELECT_COLORS.default }}
         >
           {value}
+        </span>
+      );
+    }
+    case 'multiselect': {
+      const vals = parseMultiSelectValue(value);
+      if (vals.length === 0) return null;
+      return (
+        <span className="board-prop-multiselect">
+          {vals.map((v) => {
+            const opt = (prop.options || []).find((o) => o.value === v);
+            const color = opt?.color || 'default';
+            return (
+              <span
+                key={v}
+                className="select-tag"
+                style={{ backgroundColor: SELECT_COLORS[color] || SELECT_COLORS.default, marginRight: '2px' }}
+              >
+                {v}
+              </span>
+            );
+          })}
         </span>
       );
     }

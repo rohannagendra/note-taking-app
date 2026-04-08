@@ -3981,3 +3981,35 @@ body {
 [data-theme="dark"] .aggregation-value {
   color: rgba(255, 255, 255, 0.7);
 }
+
+/* ============================================
+   MULTI-SELECT CELL
+   ============================================ */
+.multiselect-cell-wrapper { position: relative; width: 100%; min-height: 28px; }
+.multiselect-trigger { cursor: pointer; padding: 2px 4px; border-radius: 3px; min-height: 24px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+.multiselect-trigger:hover { background: var(--bg-hover); }
+.multiselect-tags { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.multiselect-tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 3px; font-size: 12px; white-space: nowrap; gap: 3px; }
+.multiselect-tag-remove { cursor: pointer; font-size: 14px; line-height: 1; opacity: 0.6; margin-left: 1px; }
+.multiselect-tag-remove:hover { opacity: 1; }
+.multiselect-dropdown { min-width: 220px; }
+.multiselect-checkbox { font-size: 14px; margin-right: 6px; color: var(--text-secondary); flex-shrink: 0; }
+.db-list-multiselect-tags { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.board-prop-multiselect { display: inline-flex; flex-wrap: wrap; gap: 2px; }
+
+/* ============================================
+   MULTI-SORT BAR
+   ============================================ */
+.sort-bar-multi { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+.sort-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sort-row-label { font-size: 12px; color: var(--text-tertiary); min-width: 55px; text-align: right; }
+.sort-remove-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-tertiary); padding: 2px 6px; border-radius: 3px; line-height: 1; }
+.sort-remove-btn:hover { background: var(--bg-hover); color: var(--red); }
+.sort-bar-actions { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.sort-add-btn { font-size: 13px; }
+.sort-bar-empty { font-size: 13px; color: var(--text-placeholder); padding: 4px 0; }
+.sort-indicator-num { font-size: 9px; margin-left: 1px; background: var(--accent-blue); color: white; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+
+[data-theme="dark"] .multiselect-tag-remove { color: rgba(255,255,255,0.6); }
+[data-theme="dark"] .multiselect-tag-remove:hover { color: rgba(255,255,255,1); }
+[data-theme="dark"] .sort-remove-btn:hover { color: #ff6b6b; }
