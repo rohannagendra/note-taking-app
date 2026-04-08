@@ -162,6 +162,11 @@ export default function App() {
     setSidebarCollapsed((v) => !v);
   }, []);
 
+  // Persist sort preference
+  useEffect(() => {
+    localStorage.setItem('note-sort', sortBy);
+  }, [sortBy]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {

@@ -190,14 +190,42 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="sidebar-search">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+        {/* Search + Sort */}
+        <div className="sidebar-search-row">
+          <div className="sidebar-search" style={{ flex: 1 }}>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+          <div className="sort-button-wrapper" ref={sortDropdownRef}>
+            <button
+              className={`icon-btn sort-trigger${sortBy !== 'manual' ? ' active' : ''}`}
+              onClick={() => setSortDropdownOpen((v) => !v)}
+              title="Sort pages"
+            >
+              &#8597;
+            </button>
+            {sortDropdownOpen && (
+              <div className="sort-dropdown">
+                {sortOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`sort-option${sortBy === opt.value ? ' active' : ''}`}
+                    onClick={() => {
+                      onSortChange(opt.value);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    {sortBy === opt.value && <span className="sort-check">&#10003;</span>}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tag filter */}
@@ -240,7 +268,7 @@ export default function Sidebar({
                   className={`sidebar-page-item${activePage === page.id ? ' active' : ''}`}
                   onClick={() => onSelectPage(page.id)}
                 >
-                  <span className="page-icon">{page.icon || '📄'}</span>
+                  <span className="page-icon">{page.icon || '\uD83D\uDCC4'}</span>
                   <span className="page-title">{page.title || 'Untitled'}</span>
                   <div className="page-actions">
                     <button
@@ -272,6 +300,7 @@ export default function Sidebar({
               onDeleteProject={onDeleteProject}
               onCreatePageInProject={onCreatePageInProject}
               onMovePageToProject={onMovePageToProject}
+              onToggleFavorite={onToggleFavorite}
               allProjects={sortedProjects}
             />
           ))}
@@ -375,6 +404,17 @@ export default function Sidebar({
           <>
             <div className="context-menu-overlay" onClick={closePageMenu} />
             <div className="context-menu" style={{ top: pageMenu.top, left: pageMenu.left }}>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  const page = pages.find(p => p.id === pageMenu.pageId);
+                  if (page) onToggleFavorite(page.id, !page.is_favorite);
+                  closePageMenu();
+                }}
+              >
+                <span>{pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? '\u2606' : '\u2B50'}</span>
+                {pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? ' Remove from favorites' : ' Add to favorites'}
+              </button>
               <button
                 className="context-menu-item"
                 onClick={() => setMoveSubmenuOpen((v) => !v)}

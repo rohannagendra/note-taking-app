@@ -584,6 +584,60 @@ export function createRoutes(db) {
     }
   });
 
+  // ============ COMMENTS ============
+
+  // GET /api/blocks/:blockId/comments
+  router.get('/blocks/:blockId/comments', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM comments WHERE block_id = $1 ORDER BY created_at ASC',
+        [req.params.blockId]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/blocks/:blockId/comments
+  router.post('/blocks/:blockId/comments', async (req, res) => {
+    try {
+      const { content } = req.body;
+      const id = crypto.randomUUID();
+      await db.query(
+        'INSERT INTO comments (id, block_id, content) VALUES ($1, $2, $3)',
+        [id, req.params.blockId, content || '']
+      );
+      const result = await db.query('SELECT * FROM comments WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PATCH /api/comments/:id
+  router.patch('/comments/:id', async (req, res) => {
+    try {
+      const { content } = req.body;
+      await db.query(
+        'UPDATE comments SET content = $1 WHERE id = $2',
+        [content, req.params.id]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/comments/:id
+  router.delete('/comments/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM comments WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   // ============ IMPORT ============
 
   // POST /api/import — parse markdown text into a new page with blocks

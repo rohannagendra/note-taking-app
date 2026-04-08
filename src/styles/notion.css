@@ -1845,3 +1845,31 @@ body {
 .backlinks-list { margin-top: 4px; }
 .backlink-item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--text-secondary); }
 .backlink-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* ============================================
+   FAVORITES
+   ============================================ */
+.favorites-section {
+  margin-bottom: 4px;
+}
+
+.favorites-section .sidebar-section-header .sidebar-section-title {
+  color: var(--text-secondary);
+}
+
+.favorite-star {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 80ms;
+}
+
+.sidebar-page-item:hover .favorite-star,
+.favorite-star.active {
+  opacity: 1;
+}
+
+.favorite-star.active {
+  color: rgb(233, 168, 0);
+}
