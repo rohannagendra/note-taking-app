@@ -158,10 +158,16 @@ export default function Sidebar({
     closePageMenu();
   };
 
+  const sidebarClassName = [
+    'sidebar',
+    collapsed && !isMobile ? 'collapsed' : '',
+    isMobile && mobileSidebarOpen ? 'mobile-open' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <>
-      {/* Collapsed state: show only toggle button */}
-      {collapsed && (
+      {/* Collapsed state: show only toggle button (desktop only) */}
+      {collapsed && !isMobile && (
         <div style={{ padding: '10px 8px', flexShrink: 0 }}>
           <button
             className="sidebar-toggle"
@@ -173,7 +179,7 @@ export default function Sidebar({
         </div>
       )}
 
-      <div className={`sidebar${collapsed ? ' collapsed' : ''}`}>
+      <div className={sidebarClassName}>
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-logo">
