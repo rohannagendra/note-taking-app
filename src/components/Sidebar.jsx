@@ -23,6 +23,7 @@ export default function Sidebar({
   activeTagId,
   onSelectTag,
   onSync,
+  onImport,
   theme,
   onToggleTheme,
 }) {
@@ -31,6 +32,18 @@ export default function Sidebar({
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState(null);
+  const importFileRef = useRef(null);
+
+  const handleImportFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (onImport) onImport(evt.target.result);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
   const [serverSearchResults, setServerSearchResults] = useState(null);
   const searchTimerRef = useRef(null);
 

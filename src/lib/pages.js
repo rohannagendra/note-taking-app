@@ -39,3 +39,7 @@ export async function searchPages(query) {
 export async function syncToMarkdown() {
   return apiFetch('/sync', { method: 'POST' });
 }
+
+export async function importMarkdown(markdown, title) {
+  return apiFetch('/import', { method: 'POST', body: { markdown, title } });
+}

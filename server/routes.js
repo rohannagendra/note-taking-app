@@ -562,6 +562,113 @@ export function createRoutes(db) {
     }
   });
 
+  // ============ IMPORT ============
+
+  // POST /api/import — parse markdown text into a new page with blocks
+  router.post('/import', async (req, res) => {
+    try {
+      const { markdown, title: providedTitle } = req.body;
+      if (!markdown || typeof markdown !== 'string') {
+        return res.status(400).json({ error: 'markdown field is required' });
+      }
+      const lines = markdown.split('\n');
+      const blocks = [];
+      let firstH1 = null;
+      let inCodeBlock = false;
+      let codeLines = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.trimStart().startsWith('```')) {
+          if (inCodeBlock) {
+            blocks.push({ type: 'code', content: codeLines.join('\n'), checked: false, props: {} });
+            codeLines = [];
+            inCodeBlock = false;
+          } else {
+            inCodeBlock = true;
+            codeLines = [];
+          }
+          continue;
+        }
+        if (inCodeBlock) { codeLines.push(line); continue; }
+        if (line.trim() === '') continue;
+        if (/^(\s*[-*_]\s*){3,}$/.test(line.trim())) {
+          blocks.push({ type: 'divider', content: '', checked: false, props: {} });
+          continue;
+        }
+        if (line.trimStart().startsWith('|')) {
+          const tableLines = [line];
+          let j = i + 1;
+          while (j < lines.length && lines[j].trimStart().startsWith('|')) { tableLines.push(lines[j]); j++; }
+          i = j - 1;
+          const dataRows = tableLines.filter((tl) => !/^\s*\|[\s\-:|]+\|\s*$/.test(tl));
+          const parseCells = (tl) => tl.split('|').map((c) => c.trim()).filter((c) => c !== '');
+          if (dataRows.length > 0) {
+            const headers = parseCells(dataRows[0]);
+            const rows = dataRows.slice(1).map(parseCells);
+            blocks.push({ type: 'table', content: JSON.stringify({ headers, rows }), checked: false, props: {} });
+          }
+          continue;
+        }
+        const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+        if (imgMatch) {
+          blocks.push({ type: 'image', content: imgMatch[2], checked: false, props: { caption: imgMatch[1], width: 100, align: 'center' } });
+          continue;
+        }
+        const mentionMatch = line.match(/^\[\[([^\]]+)\]\]\s*$/);
+        if (mentionMatch) {
+          const mentionTitle = mentionMatch[1];
+          const pageResult = await db.query('SELECT id, title, icon FROM pages WHERE title = $1 LIMIT 1', [mentionTitle]);
+          const targetPage = pageResult.rows[0];
+          blocks.push({ type: 'mention', content: targetPage ? targetPage.id : '', checked: false, props: { page_title: mentionTitle, page_icon: targetPage ? (targetPage.icon || '📄') : '📄', embedded: false } });
+          continue;
+        }
+        const todoMatch = line.match(/^[-*]\s+\[([ xX])\]\s+(.*)/);
+        if (todoMatch) {
+          blocks.push({ type: 'todo', content: todoMatch[2], checked: todoMatch[1].toLowerCase() === 'x', props: {} });
+          continue;
+        }
+        const h3Match = line.match(/^###\s+(.*)/);
+        if (h3Match) { blocks.push({ type: 'h3', content: h3Match[1], checked: false, props: {} }); continue; }
+        const h2Match = line.match(/^##\s+(.*)/);
+        if (h2Match) { blocks.push({ type: 'h2', content: h2Match[1], checked: false, props: {} }); continue; }
+        const h1Match = line.match(/^#\s+(.*)/);
+        if (h1Match) { if (!firstH1) firstH1 = h1Match[1]; blocks.push({ type: 'h1', content: h1Match[1], checked: false, props: {} }); continue; }
+        const bulletMatch = line.match(/^[-*]\s+(.*)/);
+        if (bulletMatch) { blocks.push({ type: 'bullet', content: bulletMatch[1], checked: false, props: {} }); continue; }
+        const numberMatch = line.match(/^\d+\.\s+(.*)/);
+        if (numberMatch) { blocks.push({ type: 'number', content: numberMatch[1], checked: false, props: {} }); continue; }
+        const quoteMatch = line.match(/^>\s+(.*)/);
+        if (quoteMatch) { blocks.push({ type: 'quote', content: quoteMatch[1], checked: false, props: {} }); continue; }
+        blocks.push({ type: 'text', content: line, checked: false, props: {} });
+      }
+      if (inCodeBlock && codeLines.length > 0) {
+        blocks.push({ type: 'code', content: codeLines.join('\n'), checked: false, props: {} });
+      }
+      const pageTitle = providedTitle || firstH1 || 'Imported Note';
+      const pageId = crypto.randomUUID();
+      const posResult = await db.query('SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM pages');
+      const pagePosition = posResult.rows[0].pos;
+      await db.query('INSERT INTO pages (id, title, icon, position) VALUES ($1, $2, $3, $4)', [pageId, pageTitle, '📄', pagePosition]);
+      for (let idx = 0; idx < blocks.length; idx++) {
+        const b = blocks[idx];
+        const blockId = crypto.randomUUID();
+        await db.query(
+          `INSERT INTO blocks (id, page_id, type, content, checked, props, position) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
+          [blockId, pageId, b.type, b.content, b.checked, JSON.stringify(b.props), idx]
+        );
+      }
+      if (blocks.length === 0) {
+        const blockId = crypto.randomUUID();
+        await db.query(`INSERT INTO blocks (id, page_id, type, content, position) VALUES ($1, $2, 'text', '', 0)`, [blockId, pageId]);
+      }
+      const result = await db.query('SELECT * FROM pages WHERE id = $1', [pageId]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error('Import error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ============ SYNC ============
 
   // POST /api/sync — export all pages as markdown files to ./data/markdown/
