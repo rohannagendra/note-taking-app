@@ -22,6 +22,7 @@ export default function Sidebar({
   allTags,
   activeTagId,
   onSelectTag,
+  onToggleFavorite,
   onSync,
   onImport,
   theme,
@@ -29,6 +30,7 @@ export default function Sidebar({
   sortBy,
   onSortChange,
 }) {
+  const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const [uncategorizedExpanded, setUncategorizedExpanded] = useState(true);
   const [pageMenu, setPageMenu] = useState(null); // { pageId, top, left }
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
@@ -188,14 +190,42 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="sidebar-search">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+        {/* Search + Sort */}
+        <div className="sidebar-search-row">
+          <div className="sidebar-search" style={{ flex: 1 }}>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+          <div className="sort-button-wrapper" ref={sortDropdownRef}>
+            <button
+              className={`icon-btn sort-trigger${sortBy !== 'manual' ? ' active' : ''}`}
+              onClick={() => setSortDropdownOpen((v) => !v)}
+              title="Sort pages"
+            >
+              &#8597;
+            </button>
+            {sortDropdownOpen && (
+              <div className="sort-dropdown">
+                {sortOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`sort-option${sortBy === opt.value ? ' active' : ''}`}
+                    onClick={() => {
+                      onSortChange(opt.value);
+                      setSortDropdownOpen(false);
+                    }}
+                  >
+                    {sortBy === opt.value && <span className="sort-check">&#10003;</span>}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tag filter */}
@@ -207,6 +237,56 @@ export default function Sidebar({
 
         {/* Content */}
         <div className="sidebar-content">
+          {/* Favorites section */}
+          {pages.filter(p => p.is_favorite).length > 0 && (
+            <div className="sidebar-section favorites-section">
+              <div
+                className="sidebar-section-header"
+                onClick={() => setFavoritesExpanded(v => !v)}
+              >
+                <div className="sidebar-section-title">
+                  <span className={`chevron${favoritesExpanded ? '' : ' collapsed'}`}>
+                    &#9662;
+                  </span>
+                  Favorites
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-tertiary)',
+                      marginLeft: '4px',
+                      textTransform: 'none',
+                      letterSpacing: '0',
+                    }}
+                  >
+                    {pages.filter(p => p.is_favorite).length}
+                  </span>
+                </div>
+              </div>
+              {favoritesExpanded && pages.filter(p => p.is_favorite).map(page => (
+                <div
+                  key={`fav-${page.id}`}
+                  className={`sidebar-page-item${activePage === page.id ? ' active' : ''}`}
+                  onClick={() => onSelectPage(page.id)}
+                >
+                  <span className="page-icon">{page.icon || '\uD83D\uDCC4'}</span>
+                  <span className="page-title">{page.title || 'Untitled'}</span>
+                  <div className="page-actions">
+                    <button
+                      className="icon-btn favorite-star active"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(page.id, false);
+                      }}
+                      title="Remove from favorites"
+                    >
+                      &#9733;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Project groups */}
           {sortedProjects.map((proj) => (
             <ProjectGroup
@@ -220,6 +300,7 @@ export default function Sidebar({
               onDeleteProject={onDeleteProject}
               onCreatePageInProject={onCreatePageInProject}
               onMovePageToProject={onMovePageToProject}
+              onToggleFavorite={onToggleFavorite}
               allProjects={sortedProjects}
             />
           ))}
@@ -323,6 +404,17 @@ export default function Sidebar({
           <>
             <div className="context-menu-overlay" onClick={closePageMenu} />
             <div className="context-menu" style={{ top: pageMenu.top, left: pageMenu.left }}>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  const page = pages.find(p => p.id === pageMenu.pageId);
+                  if (page) onToggleFavorite(page.id, !page.is_favorite);
+                  closePageMenu();
+                }}
+              >
+                <span>{pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? '\u2606' : '\u2B50'}</span>
+                {pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? ' Remove from favorites' : ' Add to favorites'}
+              </button>
               <button
                 className="context-menu-item"
                 onClick={() => setMoveSubmenuOpen((v) => !v)}

@@ -10,6 +10,7 @@ export default function ProjectGroup({
   onDeleteProject,
   onCreatePageInProject,
   onMovePageToProject,
+  onToggleFavorite,
   allProjects,
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -220,6 +221,17 @@ export default function ProjectGroup({
         <>
           <div className="context-menu-overlay" onClick={closePageMenu} />
           <div className="context-menu" style={{ top: pageMenu.top, left: pageMenu.left }}>
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                const page = pages.find(p => p.id === pageMenu.pageId);
+                if (page && onToggleFavorite) onToggleFavorite(page.id, !page.is_favorite);
+                closePageMenu();
+              }}
+            >
+              <span>{pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? '\u2606' : '\u2B50'}</span>
+              {pages.find(p => p.id === pageMenu.pageId)?.is_favorite ? ' Remove from favorites' : ' Add to favorites'}
+            </button>
             <button
               className="context-menu-item"
               onClick={() => setMoveSubmenuOpen((v) => !v)}

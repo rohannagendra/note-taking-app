@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDB } from '../lib/db.js';
-import { getPages, createPage, updatePage, deletePage, syncToMarkdown, importMarkdown } from '../lib/pages.js';
+import { getPages, createPage, updatePage, deletePage, toggleFavorite, syncToMarkdown, importMarkdown } from '../lib/pages.js';
 import {
   getProjects,
   createProject,
@@ -133,6 +133,13 @@ export default function App() {
     );
   }, []);
 
+  // --- Favorite handler ---
+
+  const handleToggleFavorite = useCallback(async (pageId, isFavorite) => {
+    await toggleFavorite(pageId, isFavorite);
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, is_favorite: isFavorite } : p));
+  }, []);
+
   // --- Sync handler ---
 
   const handleSync = useCallback(async () => {
@@ -154,6 +161,11 @@ export default function App() {
   const handleToggleCollapse = useCallback(() => {
     setSidebarCollapsed((v) => !v);
   }, []);
+
+  // Persist sort preference
+  useEffect(() => {
+    localStorage.setItem('note-sort', sortBy);
+  }, [sortBy]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -203,6 +215,7 @@ export default function App() {
         allTags={allTags}
         activeTagId={activeTagId}
         onSelectTag={setActiveTagId}
+        onToggleFavorite={handleToggleFavorite}
         onSync={handleSync}
         onImport={handleImport}
         sortBy={sortBy}

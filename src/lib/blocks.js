@@ -36,3 +36,27 @@ export async function reorderBlocks(pageId, blockIds) {
     body: { blockIds },
   });
 }
+
+export async function getComments(blockId) {
+  return apiFetch(`/blocks/${blockId}/comments`);
+}
+
+export async function addComment(blockId, content) {
+  return apiFetch(`/blocks/${blockId}/comments`, {
+    method: 'POST',
+    body: { content },
+  });
+}
+
+export async function updateComment(id, content) {
+  return apiFetch(`/comments/${id}`, {
+    method: 'PATCH',
+    body: { content },
+  });
+}
+
+export async function deleteComment(id) {
+  return apiFetch(`/comments/${id}`, {
+    method: 'DELETE',
+  });
+}
