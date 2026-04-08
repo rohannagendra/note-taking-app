@@ -632,7 +632,7 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
               <option value="checkbox">Checkbox</option>
               <option value="date">Date</option>
             </select>
-            <button className="db-action-btn" onClick={handleAddProperty}>
+            <button className="db-action-btn" onClick={() => handleAddProperty()}>
               Add
             </button>
             <button
