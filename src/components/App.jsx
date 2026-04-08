@@ -22,6 +22,17 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState(() => localStorage.getItem('note-sort') || 'manual');
+  const [theme, setTheme] = useState(() => localStorage.getItem('note-theme') || 'light');
+
+  // Theme management
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('note-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+  }, []);
 
   // Initialize DB and load pages + projects + tags
   useEffect(() => {
@@ -221,6 +232,8 @@ export default function App() {
         onImport={handleImport}
         sortBy={sortBy}
         onSortChange={setSortBy}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {activePageObj ? (
