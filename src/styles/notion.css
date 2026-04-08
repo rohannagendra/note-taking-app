@@ -3504,6 +3504,275 @@ body {
   background: rgba(35, 131, 226, 0.12);
 }
 
+/* --- Database Search --- */
+.db-search-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.db-search-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: border-color 80ms ease, width 150ms ease;
+  cursor: pointer;
+}
+
+.db-search-container.expanded {
+  border-color: var(--border-default);
+  background: var(--bg-primary);
+  width: 180px;
+}
+
+.db-search-container:not(.expanded):hover {
+  background: var(--bg-hover);
+}
+
+.db-search-icon {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.db-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  width: 100%;
+  padding: 2px 0;
+  font-family: var(--font-sans);
+}
+
+.db-search-input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.db-search-clear {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.db-search-clear:hover {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .db-search-container.expanded {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #2f2f2f;
+}
+
+[data-theme="dark"] .db-search-input {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* --- Bulk Select & Actions --- */
+.db-select-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+
+.db-th-select {
+  min-width: 36px !important;
+  width: 36px;
+  text-align: center;
+  padding: 6px 4px !important;
+}
+
+.db-cell-select-col {
+  width: 36px;
+  text-align: center;
+  padding: 4px !important;
+}
+
+.db-row-selected {
+  background: var(--accent-blue-bg) !important;
+}
+
+.db-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--accent-blue-bg);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.db-bulk-delete-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #fff;
+  background: var(--red);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: opacity 80ms ease;
+}
+
+.db-bulk-delete-btn:hover {
+  opacity: 0.85;
+}
+
+.db-bulk-deselect-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 80ms ease;
+}
+
+.db-bulk-deselect-btn:hover {
+  background: var(--bg-hover);
+}
+
+[data-theme="dark"] .db-bulk-bar {
+  background: rgba(35, 131, 226, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .db-bulk-deselect-btn {
+  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .db-bulk-deselect-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .db-row-selected {
+  background: rgba(35, 131, 226, 0.12) !important;
+}
+
 /* Database cell validation */
 .db-cell-invalid { background: rgba(235, 87, 87, 0.1) !important; outline: 2px solid var(--red) !important; border-radius: 3px; }
 [data-theme="dark"] .db-cell-invalid { background: rgba(235, 87, 87, 0.15) !important; }
+
+/* Column resize handle */
+.db-col-resize {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 2;
+}
+.db-col-resize:hover,
+.db-col-resize.resizing {
+  background: var(--accent-blue);
+}
+
+/* Column drag reorder */
+.db-th.dragging {
+  opacity: 0.4;
+}
+.db-th.drag-over-left {
+  box-shadow: inset 3px 0 0 var(--accent-blue);
+}
+.db-th.drag-over-right {
+  box-shadow: inset -3px 0 0 var(--accent-blue);
+}
+
+/* Footer aggregations */
+.db-footer td {
+  border-top: 2px solid var(--border-default);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  position: relative;
+  border-left: 1px solid var(--border-default);
+  border-right: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default);
+}
+.db-footer td:hover {
+  background: var(--bg-hover);
+}
+.aggregation-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  min-width: 180px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 4px;
+  box-shadow: 0 0 0 1px rgba(15,15,15,.05), 0 3px 6px rgba(15,15,15,.1), 0 9px 24px rgba(15,15,15,.2);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.aggregation-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 3px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.aggregation-option:hover {
+  background: var(--bg-hover);
+}
+.aggregation-option.active {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+.aggregation-value {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.aggregation-label {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  margin-right: 4px;
+}
+
+/* Dark mode for new table features */
+[data-theme="dark"] .db-footer td {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.45);
+}
+[data-theme="dark"] .db-footer td:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-theme="dark"] .aggregation-dropdown {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .aggregation-option {
+  color: rgba(255, 255, 255, 0.9);
+}
+[data-theme="dark"] .aggregation-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+[data-theme="dark"] .aggregation-value {
+  color: rgba(255, 255, 255, 0.7);
+}

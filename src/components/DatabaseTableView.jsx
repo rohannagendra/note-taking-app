@@ -32,6 +32,29 @@ const TYPE_LABELS = {
   date: 'Date',
 };
 
+const NUMBER_FORMATS = {
+  number: { label: 'Number', example: '1234.5' },
+  currency: { label: 'Currency ($)', example: '$1,234.50' },
+  percent: { label: 'Percent', example: '12.5%' },
+  commas: { label: 'With commas', example: '1,234' },
+};
+
+function formatNumber(value, format) {
+  if (value === '' || value === null || value === undefined) return '';
+  const num = parseFloat(value);
+  if (isNaN(num)) return String(value);
+  switch (format) {
+    case 'currency':
+      return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    case 'percent':
+      return num + '%';
+    case 'commas':
+      return num.toLocaleString('en-US', { maximumFractionDigits: 10 });
+    default:
+      return String(num);
+  }
+}
+
 export default function DatabaseTableView({
   schema,
   rows,
@@ -46,6 +69,7 @@ export default function DatabaseTableView({
   sortProp,
   sortDir,
   onCreateOption,
+  onBulkDelete,
 }) {
   const saveTimers = useRef({});
   const [commentsOpenRowId, setCommentsOpenRowId] = useState(null);
@@ -58,6 +82,7 @@ export default function DatabaseTableView({
   const [colorPickerOption, setColorPickerOption] = useState(null);
   const [newOptionValue, setNewOptionValue] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [selectedRows, setSelectedRows] = useState(new Set());
   const menuRef = useRef(null);
   const renameInputRef = useRef(null);
 
@@ -252,11 +277,73 @@ export default function DatabaseTableView({
 
   const isTitle = (col) => col.id === 'title';
 
+  const allSelected = rows.length > 0 && rows.every((r) => selectedRows.has(r.id));
+  const someSelected = selectedRows.size > 0;
+
+  const handleSelectAll = () => {
+    if (allSelected) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(rows.map((r) => r.id)));
+    }
+  };
+
+  const handleSelectRow = (rowId) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (onBulkDelete) {
+      await onBulkDelete(selectedRows);
+    } else {
+      for (const id of selectedRows) {
+        await onDeleteRow(id);
+      }
+    }
+    setSelectedRows(new Set());
+  };
+
   return (
     <div className="database-table-wrapper" style={{ position: 'relative' }}>
+      {someSelected && (
+        <div className="db-bulk-bar">
+          <span style={{ fontWeight: 500 }}>{selectedRows.size} selected</span>
+          <button
+            className="db-bulk-delete-btn"
+            onClick={handleBulkDelete}
+          >
+            Delete
+          </button>
+          <button
+            className="db-bulk-deselect-btn"
+            onClick={() => setSelectedRows(new Set())}
+          >
+            Deselect all
+          </button>
+        </div>
+      )}
       <table className="database-table">
         <thead>
           <tr>
+            <th className="db-th db-th-select">
+              <input
+                type="checkbox"
+                className="db-select-checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = someSelected && !allSelected;
+                }}
+                onChange={handleSelectAll}
+              />
+            </th>
             {schema.map((col) => (
               <th
                 key={col.id}
@@ -286,7 +373,15 @@ export default function DatabaseTableView({
             const rowCommentCount = commentCounts[row.id] || 0;
             return (
               <React.Fragment key={row.id}>
-                <tr className="db-row">
+                <tr className={`db-row${selectedRows.has(row.id) ? ' db-row-selected' : ''}`}>
+                  <td className="db-cell db-cell-select-col">
+                    <input
+                      type="checkbox"
+                      className="db-select-checkbox"
+                      checked={selectedRows.has(row.id)}
+                      onChange={() => handleSelectRow(row.id)}
+                    />
+                  </td>
                   {schema.map((col) => (
                     <td key={col.id} className="db-cell">
                       {renderCell(col, props[col.id], row.id, {
@@ -327,7 +422,7 @@ export default function DatabaseTableView({
                 </tr>
                 {commentsOpenRowId === row.id && (
                   <tr>
-                    <td colSpan={schema.length + 1} style={{ padding: 0 }}>
+                    <td colSpan={schema.length + 2} style={{ padding: 0 }}>
                       <RowComments
                         rowId={row.id}
                         onClose={() => setCommentsOpenRowId(null)}
@@ -387,6 +482,39 @@ export default function DatabaseTableView({
                     <span>{label}</span>
                   </span>
                   {menuCol.type === type && (
+                    <span style={{ marginLeft: 'auto', color: 'var(--accent-blue)' }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : submenu === 'format' ? (
+            /* Number format submenu */
+            <div className="property-menu-submenu">
+              <button
+                className="property-menu-item"
+                onClick={() => setSubmenu(null)}
+                style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}
+              >
+                ← Back
+              </button>
+              <div className="property-menu-separator" />
+              {Object.entries(NUMBER_FORMATS).map(([key, { label, example }]) => (
+                <button
+                  key={key}
+                  className="property-menu-item"
+                  onClick={() => {
+                    if (onUpdateProperty) {
+                      onUpdateProperty(menuCol.id, { format: key });
+                    }
+                    setMenuCol((prev) => ({ ...prev, format: key }));
+                    closeMenu();
+                  }}
+                >
+                  <span className="type-option">
+                    <span style={{ minWidth: '90px' }}>{label}</span>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>{example}</span>
+                  </span>
+                  {(menuCol.format || 'number') === key && (
                     <span style={{ marginLeft: 'auto', color: 'var(--accent-blue)' }}>✓</span>
                   )}
                 </button>
@@ -493,6 +621,15 @@ export default function DatabaseTableView({
                   <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>→</span>
                 </button>
               )}
+              {menuCol.type === 'number' && (
+                <button className="property-menu-item" onClick={() => setSubmenu('format')}>
+                  <span style={{ width: '20px', textAlign: 'center' }}>🔢</span>
+                  Format
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                    {NUMBER_FORMATS[menuCol.format || 'number']?.label || 'Number'} →
+                  </span>
+                </button>
+              )}
               <button className="property-menu-item" onClick={() => { onSortBy && onSortBy(menuCol.id); closeMenu(); }}>
                 <span style={{ width: '20px', textAlign: 'center' }}>↕</span>
                 Sort
@@ -549,9 +686,10 @@ export default function DatabaseTableView({
   );
 }
 
-function NumberCell({ value, onEdit, onBlur }) {
+function NumberCell({ value, onEdit, onBlur, format }) {
   const ref = useRef(null);
   const [invalid, setInvalid] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (ref.current && document.activeElement !== ref.current) {
@@ -574,10 +712,18 @@ function NumberCell({ value, onEdit, onBlur }) {
     }
   };
 
+  const handleFocus = () => {
+    setFocused(true);
+    // Show raw number when focused
+    if (ref.current) {
+      ref.current.innerText = value != null ? String(value) : '';
+    }
+  };
+
   const handleBlur = (e) => {
+    setFocused(false);
     const text = e.currentTarget.innerText;
     if (!validate(text)) {
-      // Revert to last valid value
       e.currentTarget.innerText = value != null ? String(value) : '';
       setInvalid(false);
       return;
@@ -586,6 +732,11 @@ function NumberCell({ value, onEdit, onBlur }) {
     onBlur(text);
   };
 
+  // Show formatted value when not focused
+  const displayValue = !focused && format && format !== 'number'
+    ? formatNumber(value, format)
+    : String(value || '');
+
   return (
     <div
       ref={ref}
@@ -593,8 +744,9 @@ function NumberCell({ value, onEdit, onBlur }) {
       contentEditable
       suppressContentEditableWarning
       onInput={handleInput}
+      onFocus={handleFocus}
       onBlur={handleBlur}
-      dangerouslySetInnerHTML={{ __html: escapeHtml(String(value || '')) }}
+      dangerouslySetInnerHTML={{ __html: escapeHtml(displayValue) }}
     />
   );
 }
@@ -729,6 +881,7 @@ function renderCell(col, value, rowId, handlers) {
       return (
         <NumberCell
           value={value}
+          format={col.format}
           onEdit={(val) => handlers.handleCellEdit(rowId, col.id, val)}
           onBlur={(val) => handlers.handleCellBlur(rowId, col.id, { currentTarget: { innerText: val } })}
         />

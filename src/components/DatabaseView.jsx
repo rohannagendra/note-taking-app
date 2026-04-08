@@ -51,8 +51,12 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
   const [sortDir, setSortDir] = useState('asc');
   const [showFilter, setShowFilter] = useState(false);
   const [showSort, setShowSort] = useState(false);
+  const [dbSearch, setDbSearch] = useState('');
+  const [dbSearchInput, setDbSearchInput] = useState('');
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const nameRef = useRef(null);
   const saveTimer = useRef(null);
+  const searchTimer = useRef(null);
 
   // Load database for this page (or linked database)
   useEffect(() => {
@@ -324,6 +328,21 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
     }
   }, [sortProp]);
 
+  const handleSearchInput = useCallback((val) => {
+    setDbSearchInput(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDbSearch(val);
+    }, 200);
+  }, []);
+
+  const handleBulkDelete = useCallback(async (rowIds) => {
+    for (const id of rowIds) {
+      await deleteDatabaseRow(id);
+    }
+    setRows((prev) => prev.filter((r) => !rowIds.has(r.id)));
+  }, []);
+
   // Parse row properties
   const parsedRows = rows.map((r) => ({
     ...r,
@@ -346,6 +365,18 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
         case 'is_not_empty': return !!val;
         default: return true;
       }
+    });
+  }
+
+  // Apply database search
+  if (dbSearch) {
+    const searchLower = dbSearch.toLowerCase();
+    displayRows = displayRows.filter((r) => {
+      return schema.some((col) => {
+        const val = r.properties[col.id];
+        if (val === undefined || val === null) return false;
+        return String(val).toLowerCase().includes(searchLower);
+      });
     });
   }
 
@@ -492,6 +523,47 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
             >
               List
             </button>
+          </div>
+
+          <div className="db-search-wrapper">
+            <div className={`db-search-container${searchExpanded ? ' expanded' : ''}`}>
+              <span
+                className="db-search-icon"
+                onClick={() => setSearchExpanded(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M11.4 10l3.3 3.3c.4.4.4 1 0 1.4-.4.4-1 .4-1.4 0L10 11.4A5.5 5.5 0 1111.4 10zM6.5 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"/>
+                </svg>
+              </span>
+              {searchExpanded && (
+                <>
+                  <input
+                    className="db-search-input"
+                    type="text"
+                    placeholder="Search..."
+                    value={dbSearchInput}
+                    onChange={(e) => handleSearchInput(e.target.value)}
+                    autoFocus
+                    onBlur={() => {
+                      if (!dbSearchInput) setSearchExpanded(false);
+                    }}
+                  />
+                  {dbSearchInput && (
+                    <span
+                      className="db-search-clear"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSearchInput('');
+                        setDbSearch('');
+                        setSearchExpanded(false);
+                      }}
+                    >
+                      &times;
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <div className="database-actions">
@@ -662,6 +734,7 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
           sortProp={sortProp}
           sortDir={sortDir}
           onCreateOption={handleCreateOption}
+          onBulkDelete={handleBulkDelete}
         />
       )}
       {activeView === 'board' && (

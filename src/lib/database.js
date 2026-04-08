@@ -66,3 +66,27 @@ export async function addRowComment(rowId, content) {
 export async function deleteRowComment(commentId) {
   return apiFetch(`/row-comments/${commentId}`, { method: 'DELETE' });
 }
+
+// ============ DATABASE VIEWS ============
+
+export async function getViews(databaseId) {
+  return apiFetch(`/databases/${databaseId}/views`);
+}
+
+export async function createView(databaseId, { name, view_type, filters, sorts }) {
+  return apiFetch(`/databases/${databaseId}/views`, {
+    method: 'POST',
+    body: { name, view_type, filters, sorts },
+  });
+}
+
+export async function updateView(viewId, updates) {
+  return apiFetch(`/database-views/${viewId}`, {
+    method: 'PATCH',
+    body: updates,
+  });
+}
+
+export async function deleteView(viewId) {
+  return apiFetch(`/database-views/${viewId}`, { method: 'DELETE' });
+}

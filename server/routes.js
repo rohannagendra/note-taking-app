@@ -1157,6 +1157,90 @@ export function createRoutes(db) {
     }
   });
 
+  // ============ DATABASE VIEWS ============
+
+  // GET /api/databases/:id/views
+  router.get('/databases/:id/views', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM database_views WHERE database_id = $1 ORDER BY created_at ASC',
+        [req.params.id]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/databases/:id/views
+  router.post('/databases/:id/views', async (req, res) => {
+    try {
+      const { name, view_type, filters, sorts } = req.body;
+      const id = crypto.randomUUID();
+      await db.query(
+        `INSERT INTO database_views (id, database_id, name, view_type, filters, sorts)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          id,
+          req.params.id,
+          name || 'Default',
+          view_type || 'table',
+          JSON.stringify(filters || []),
+          JSON.stringify(sorts || []),
+        ]
+      );
+      const result = await db.query('SELECT * FROM database_views WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PATCH /api/database-views/:id
+  router.patch('/database-views/:id', async (req, res) => {
+    try {
+      const updates = req.body;
+      const fields = [];
+      const values = [];
+      let paramIndex = 1;
+      if (updates.name !== undefined) {
+        fields.push(`name = $${paramIndex++}`);
+        values.push(updates.name);
+      }
+      if (updates.view_type !== undefined) {
+        fields.push(`view_type = $${paramIndex++}`);
+        values.push(updates.view_type);
+      }
+      if (updates.filters !== undefined) {
+        fields.push(`filters = $${paramIndex++}`);
+        values.push(JSON.stringify(updates.filters));
+      }
+      if (updates.sorts !== undefined) {
+        fields.push(`sorts = $${paramIndex++}`);
+        values.push(JSON.stringify(updates.sorts));
+      }
+      if (fields.length === 0) return res.json({ ok: true });
+      values.push(req.params.id);
+      await db.query(
+        `UPDATE database_views SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+        values
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/database-views/:id
+  router.delete('/database-views/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM database_views WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/pages/:pageId/database — get database for a page
   router.get('/pages/:pageId/database', async (req, res) => {
     try {
