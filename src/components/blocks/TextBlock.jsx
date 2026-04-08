@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import MentionSearch from '../MentionSearch.jsx';
 import SlashMenu from '../SlashMenu.jsx';
+import { createDatabase, getPageDatabase } from '../../lib/database.js';
 
 export default function TextBlock({ block, onUpdate, onDelete, onAddBlock, onFocusBlock }) {
   const ref = useRef(null);
@@ -136,10 +137,33 @@ export default function TextBlock({ block, onUpdate, onDelete, onAddBlock, onFoc
     }
   }, [block.id, block.position, onUpdate, onAddBlock, onDelete, onFocusBlock, closeSlashMenu]);
 
-  const handleSlashSelect = useCallback((type, createNew) => {
+  const handleSlashSelect = useCallback(async (type, createNew) => {
     closeSlashMenu();
     // Clear the "/" from the block content
     clearTimeout(saveTimer.current);
+
+    if (type === 'database') {
+      // Create a database for this page instead of a block
+      ref.current.innerHTML = '';
+      onUpdate(block.id, { content: '' });
+      try {
+        const existing = await getPageDatabase(block.page_id);
+        if (!existing) {
+          const defaultSchema = [
+            { id: 'title', name: 'Name', type: 'text' },
+            { id: 'status', name: 'Status', type: 'select', options: [
+              { value: 'Not started', color: 'gray' },
+              { value: 'In progress', color: 'blue' },
+              { value: 'Done', color: 'green' },
+            ]},
+          ];
+          await createDatabase(block.page_id, 'Untitled Database', defaultSchema);
+        }
+      } catch (err) {
+        console.error('Failed to create database:', err);
+      }
+      return;
+    }
 
     if (createNew) {
       // For divider, table, image, mention — create a new block after this one
@@ -151,7 +175,7 @@ export default function TextBlock({ block, onUpdate, onDelete, onAddBlock, onFoc
       ref.current.innerHTML = '';
       onUpdate(block.id, { content: '', type });
     }
-  }, [block.id, block.position, onUpdate, onAddBlock, closeSlashMenu]);
+  }, [block.id, block.page_id, block.position, onUpdate, onAddBlock, closeSlashMenu]);
 
   const handleMentionSelect = useCallback((page) => {
     setMentionSearch(null);

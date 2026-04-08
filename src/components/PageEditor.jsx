@@ -620,6 +620,9 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
           + Add a block
         </div>
 
+        {/* Database View */}
+        <DatabaseView pageId={page.id} onNavigate={onNavigate} />
+
         {/* Backlinks */}
         {backlinks.length > 0 && (
           <div className="backlinks-section">
