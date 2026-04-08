@@ -32,6 +32,8 @@ export default function Sidebar({
   templates,
   onUseTemplate,
   onDeleteTemplate,
+  isMobile,
+  mobileSidebarOpen,
 }) {
   const [templatesExpanded, setTemplatesExpanded] = useState(true);
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
