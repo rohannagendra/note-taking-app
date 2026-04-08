@@ -26,12 +26,14 @@ const HIGHLIGHT_COLORS = [
   { name: 'Red', value: 'rgba(255,0,26,0.2)' },
 ];
 
-export default function FormattingToolbar() {
+export default function FormattingToolbar({ fontFamily, onFontChange }) {
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [activeFormats, setActiveFormats] = useState({});
   const [showTextColor, setShowTextColor] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
+  const [showFontMenu, setShowFontMenu] = useState(false);
+  const fontMenuRef = useRef(null);
   const toolbarRef = useRef(null);
   const textColorRef = useRef(null);
   const highlightRef = useRef(null);
@@ -126,6 +128,7 @@ export default function FormattingToolbar() {
     if (!visible) {
       setShowTextColor(false);
       setShowHighlight(false);
+      setShowFontMenu(false);
     }
   }, [visible]);
 
@@ -369,6 +372,55 @@ export default function FormattingToolbar() {
           </div>
         )}
       </div>
+      {/* Font selector */}
+      {onFontChange && (
+        <>
+          <div className="formatting-separator" />
+          <div ref={fontMenuRef} style={{ position: 'relative' }}>
+            <button
+              className={`formatting-btn${showFontMenu ? ' active' : ''}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowFontMenu((prev) => !prev);
+                setShowTextColor(false);
+                setShowHighlight(false);
+              }}
+              title="Change font"
+            >
+              <span style={{
+                fontSize: '12px',
+                fontFamily: fontFamily === 'serif' ? 'Georgia, serif' : fontFamily === 'mono' ? 'Menlo, monospace' : 'inherit'
+              }}>Aa</span>
+            </button>
+            {showFontMenu && (
+              <div className="font-dropdown" style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)' }} onMouseDown={(e) => e.preventDefault()}>
+                <button
+                  className={'font-option' + (fontFamily === 'sans' ? ' active' : '')}
+                  style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onFontChange('sans'); setShowFontMenu(false); }}
+                >
+                  Sans-serif
+                </button>
+                <button
+                  className={'font-option' + (fontFamily === 'serif' ? ' active' : '')}
+                  style={{ fontFamily: 'Georgia, "Times New Roman", Times, serif' }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onFontChange('serif'); setShowFontMenu(false); }}
+                >
+                  Serif
+                </button>
+                <button
+                  className={'font-option' + (fontFamily === 'mono' ? ' active' : '')}
+                  style={{ fontFamily: 'Menlo, Courier, monospace' }}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onFontChange('mono'); setShowFontMenu(false); }}
+                >
+                  Mono
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

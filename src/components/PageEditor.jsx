@@ -14,7 +14,6 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
   const [pageTags, setPageTags] = useState([]);
   const [copied, setCopied] = useState(false);
   const [savedAsTemplate, setSavedAsTemplate] = useState(false);
-  const [showFontMenu, setShowFontMenu] = useState(false);
   const [backlinks, setBacklinks] = useState([]);
   const [showBacklinks, setShowBacklinks] = useState(false);
   const [showCoverGradients, setShowCoverGradients] = useState(false);
@@ -367,7 +366,7 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
 
   return (
     <div className="page-editor-container">
-      <FormattingToolbar />
+      <FormattingToolbar fontFamily={fontFamily} onFontChange={onFontChange} />
       <div className="page-editor">
         {/* Toolbar */}
         <div className="page-toolbar">
@@ -414,42 +413,6 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
               {savedAsTemplate ? '\u2713 Saved!' : '\ud83d\udccb Save as Template'}
             </button>
           )}
-          <div className="font-selector">
-            <button
-              className="page-toolbar-btn"
-              onClick={() => setShowFontMenu((v) => !v)}
-              title="Change font"
-            >
-              <span style={{ fontFamily: fontFamily === 'serif' ? 'Georgia, serif' : fontFamily === 'mono' ? 'Menlo, monospace' : 'inherit' }}>Aa</span>
-              {' '}
-              {fontFamily === 'sans' ? 'Sans-serif' : fontFamily === 'serif' ? 'Serif' : 'Mono'}
-            </button>
-            {showFontMenu && (
-              <div className="font-dropdown">
-                <button
-                  className={'font-option' + (fontFamily === 'sans' ? ' active' : '')}
-                  style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
-                  onClick={() => { onFontChange('sans'); setShowFontMenu(false); }}
-                >
-                  Aa Sans-serif
-                </button>
-                <button
-                  className={'font-option' + (fontFamily === 'serif' ? ' active' : '')}
-                  style={{ fontFamily: 'Georgia, "Times New Roman", Times, serif' }}
-                  onClick={() => { onFontChange('serif'); setShowFontMenu(false); }}
-                >
-                  Aa Serif
-                </button>
-                <button
-                  className={'font-option' + (fontFamily === 'mono' ? ' active' : '')}
-                  style={{ fontFamily: 'Menlo, Courier, monospace' }}
-                  onClick={() => { onFontChange('mono'); setShowFontMenu(false); }}
-                >
-                  Aa Mono
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Cover Image */}
