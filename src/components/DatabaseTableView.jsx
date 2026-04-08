@@ -549,6 +549,56 @@ export default function DatabaseTableView({
   );
 }
 
+function NumberCell({ value, onEdit, onBlur }) {
+  const ref = useRef(null);
+  const [invalid, setInvalid] = useState(false);
+
+  useEffect(() => {
+    if (ref.current && document.activeElement !== ref.current) {
+      ref.current.innerText = value != null ? String(value) : '';
+    }
+  }, [value]);
+
+  const validate = (text) => {
+    if (text === '') return true;
+    return !isNaN(Number(text)) && text.trim() !== '';
+  };
+
+  const handleInput = (e) => {
+    const text = e.currentTarget.innerText;
+    if (validate(text)) {
+      setInvalid(false);
+      onEdit(text);
+    } else {
+      setInvalid(true);
+    }
+  };
+
+  const handleBlur = (e) => {
+    const text = e.currentTarget.innerText;
+    if (!validate(text)) {
+      // Revert to last valid value
+      e.currentTarget.innerText = value != null ? String(value) : '';
+      setInvalid(false);
+      return;
+    }
+    setInvalid(false);
+    onBlur(text);
+  };
+
+  return (
+    <div
+      ref={ref}
+      className={'db-cell-number' + (invalid ? ' db-cell-invalid' : '')}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={handleInput}
+      onBlur={handleBlur}
+      dangerouslySetInnerHTML={{ __html: escapeHtml(String(value || '')) }}
+    />
+  );
+}
+
 function SelectCell({ value, options, onChange, onCreateOption }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -677,13 +727,10 @@ function renderCell(col, value, rowId, handlers) {
       );
     case 'number':
       return (
-        <div
-          className="db-cell-number"
-          contentEditable
-          suppressContentEditableWarning
-          onInput={(e) => handlers.handleCellEdit(rowId, col.id, e.currentTarget.innerText)}
-          onBlur={(e) => handlers.handleCellBlur(rowId, col.id, e)}
-          dangerouslySetInnerHTML={{ __html: escapeHtml(String(value || '')) }}
+        <NumberCell
+          value={value}
+          onEdit={(val) => handlers.handleCellEdit(rowId, col.id, val)}
+          onBlur={(val) => handlers.handleCellBlur(rowId, col.id, { currentTarget: { innerText: val } })}
         />
       );
     case 'select':

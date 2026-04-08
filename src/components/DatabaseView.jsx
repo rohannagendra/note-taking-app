@@ -521,8 +521,9 @@ export default function DatabaseView({ pageId, onNavigate, linkedDatabaseId }) {
                   handleDeleteDatabase();
                 }
               }}
+              title="Delete database"
             >
-              Delete DB
+              {'\uD83D\uDDD1\uFE0F'}
             </button>
           </div>
         </div>

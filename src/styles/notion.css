@@ -3503,3 +3503,7 @@ body {
   border-color: var(--accent-blue);
   background: rgba(35, 131, 226, 0.12);
 }
+
+/* Database cell validation */
+.db-cell-invalid { background: rgba(235, 87, 87, 0.1) !important; outline: 2px solid var(--red) !important; border-radius: 3px; }
+[data-theme="dark"] .db-cell-invalid { background: rgba(235, 87, 87, 0.15) !important; }
