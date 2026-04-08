@@ -3167,3 +3167,276 @@ body {
 [data-theme="dark"] .select-tag {
   color: rgba(255, 255, 255, 0.9);
 }
+
+/* --- Property Menu --- */
+.property-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  box-shadow: 0 3px 12px rgba(15, 15, 15, 0.15);
+  z-index: 200;
+  min-width: 220px;
+  padding: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.property-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
+  font-family: var(--font-sans);
+  line-height: 1.4;
+}
+
+.property-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.property-menu-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.property-menu-item:disabled:hover {
+  background: none;
+}
+
+.property-menu-item.danger {
+  color: var(--red);
+}
+
+.property-menu-separator {
+  height: 1px;
+  background: var(--border-default);
+  margin: 4px 0;
+}
+
+.property-menu-submenu {
+  padding: 4px;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.option-editor {
+  padding: 4px;
+  min-width: 240px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  position: relative;
+}
+
+.option-row:hover {
+  background: var(--bg-hover);
+}
+
+.option-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.option-name-input {
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  flex: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: var(--font-sans);
+  min-width: 0;
+}
+
+.option-name-input:focus {
+  background: var(--bg-hover);
+}
+
+.option-delete-btn {
+  opacity: 0;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.option-row:hover .option-delete-btn {
+  opacity: 1;
+}
+
+.option-delete-btn:hover {
+  color: var(--red);
+}
+
+.add-option-input {
+  width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  margin-top: 4px;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.add-option-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.option-color-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 6px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  box-shadow: 0 3px 12px rgba(15, 15, 15, 0.15);
+  z-index: 210;
+}
+
+.property-rename-input {
+  width: 100%;
+  border: 1px solid var(--accent-blue);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  box-sizing: border-box;
+}
+
+.db-th-add-property {
+  min-width: 40px !important;
+  width: 40px;
+  text-align: center;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-left: none;
+}
+
+.db-th-add-property:hover {
+  background: var(--bg-hover);
+}
+
+.db-th-add-property:hover span {
+  color: var(--text-primary);
+}
+
+/* Dark mode variants for property menu */
+[data-theme="dark"] .property-menu {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .property-menu-item {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .property-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .property-menu-item.danger {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .property-menu-separator {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .type-icon {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme="dark"] .option-name-input {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .option-name-input:focus {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .option-delete-btn {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .option-delete-btn:hover {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .option-color-dot {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .add-option-input {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .add-option-input:focus {
+  border-color: var(--accent-blue);
+}
+
+[data-theme="dark"] .option-color-picker {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .property-rename-input {
+  background: #2f2f2f;
+  color: rgba(255, 255, 255, 0.9);
+  border-color: var(--accent-blue);
+}
+
+[data-theme="dark"] .db-th-add-property {
+  border-color: rgba(255, 255, 255, 0.1);
+}

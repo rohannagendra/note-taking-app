@@ -97,14 +97,28 @@ export default function DatabaseView({ pageId, onNavigate }) {
     setEditingName(false);
   }, [database]);
 
-  const handleAddProperty = useCallback(async () => {
-    if (!database || !newPropName.trim()) return;
+  const handleAddProperty = useCallback(async (name, type) => {
+    if (!database) return;
+    // Support both old-style (from toolbar) and new quick-add (from table header)
+    const propName = name || newPropName.trim();
+    const propType = type || newPropType;
+    if (!propName && !name) {
+      // Quick add from table header: auto-name
+      const existingCount = database.properties_schema.length;
+      const autoName = `Property ${existingCount}`;
+      const newProp = { id: generateId(), name: autoName, type: 'text' };
+      const newSchema = [...database.properties_schema, newProp];
+      await updateDatabase(database.id, { properties_schema: newSchema });
+      setDatabase((prev) => ({ ...prev, properties_schema: newSchema }));
+      return;
+    }
+    if (!propName) return;
     const newProp = {
       id: generateId(),
-      name: newPropName.trim(),
-      type: newPropType,
+      name: propName,
+      type: propType,
     };
-    if (newPropType === 'select') {
+    if (propType === 'select') {
       newProp.options = [
         { value: 'Option 1', color: 'gray' },
         { value: 'Option 2', color: 'blue' },
@@ -121,11 +135,111 @@ export default function DatabaseView({ pageId, onNavigate }) {
 
   const handleDeleteProperty = useCallback(async (propId) => {
     if (!database) return;
-    if (propId === 'title') return; // Cannot delete title
+    if (propId === 'title') return;
     const newSchema = database.properties_schema.filter((p) => p.id !== propId);
     await updateDatabase(database.id, { properties_schema: newSchema });
     setDatabase((prev) => ({ ...prev, properties_schema: newSchema }));
-  }, [database]);
+    // Remove the property key from all rows
+    const updatedRows = rows.map((r) => {
+      const props = typeof r.properties === 'string'
+        ? JSON.parse(r.properties)
+        : { ...(r.properties || {}) };
+      delete props[propId];
+      return { ...r, properties: props };
+    });
+    setRows(updatedRows);
+    // Persist each row update
+    for (const r of updatedRows) {
+      const props = typeof r.properties === 'string'
+        ? JSON.parse(r.properties)
+        : r.properties || {};
+      await updateDatabaseRow(r.id, props);
+    }
+  }, [database, rows]);
+
+  const handleUpdateProperty = useCallback(async (propId, updates, meta) => {
+    if (!database) return;
+    const newSchema = database.properties_schema.map((p) => {
+      if (p.id !== propId) return p;
+      return { ...p, ...updates };
+    });
+    await updateDatabase(database.id, { properties_schema: newSchema });
+    setDatabase((prev) => ({ ...prev, properties_schema: newSchema }));
+
+    // If type changed, optionally clear incompatible values
+    if (updates.type) {
+      const oldProp = database.properties_schema.find((p) => p.id === propId);
+      if (oldProp && oldProp.type !== updates.type) {
+        const defaultVal = updates.type === 'checkbox' ? false : '';
+        const updatedRows = rows.map((r) => {
+          const props = typeof r.properties === 'string'
+            ? JSON.parse(r.properties)
+            : { ...(r.properties || {}) };
+          props[propId] = defaultVal;
+          return { ...r, properties: props };
+        });
+        setRows(updatedRows);
+        for (const r of updatedRows) {
+          const props = typeof r.properties === 'string'
+            ? JSON.parse(r.properties)
+            : r.properties || {};
+          await updateDatabaseRow(r.id, props);
+        }
+      }
+    }
+
+    // If a select option was renamed, update row values
+    if (meta?.renameOption) {
+      const { from, to } = meta.renameOption;
+      if (from !== to) {
+        const updatedRows = rows.map((r) => {
+          const props = typeof r.properties === 'string'
+            ? JSON.parse(r.properties)
+            : { ...(r.properties || {}) };
+          if (props[propId] === from) {
+            props[propId] = to;
+          }
+          return { ...r, properties: props };
+        });
+        setRows(updatedRows);
+        for (const r of updatedRows) {
+          const props = typeof r.properties === 'string'
+            ? JSON.parse(r.properties)
+            : r.properties || {};
+          await updateDatabaseRow(r.id, props);
+        }
+      }
+    }
+  }, [database, rows]);
+
+  const handleDuplicateProperty = useCallback(async (propId) => {
+    if (!database) return;
+    const original = database.properties_schema.find((p) => p.id === propId);
+    if (!original) return;
+    const newProp = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: generateId(),
+      name: original.name + ' (copy)',
+    };
+    const newSchema = [...database.properties_schema, newProp];
+    await updateDatabase(database.id, { properties_schema: newSchema });
+    setDatabase((prev) => ({ ...prev, properties_schema: newSchema }));
+    // Copy values from original column to new column in all rows
+    const updatedRows = rows.map((r) => {
+      const props = typeof r.properties === 'string'
+        ? JSON.parse(r.properties)
+        : { ...(r.properties || {}) };
+      props[newProp.id] = props[propId] !== undefined ? props[propId] : '';
+      return { ...r, properties: props };
+    });
+    setRows(updatedRows);
+    for (const r of updatedRows) {
+      const props = typeof r.properties === 'string'
+        ? JSON.parse(r.properties)
+        : r.properties || {};
+      await updateDatabaseRow(r.id, props);
+    }
+  }, [database, rows]);
 
   const handleAddRow = useCallback(async (defaultProps = {}) => {
     if (!database) return;
@@ -444,7 +558,10 @@ export default function DatabaseView({ pageId, onNavigate }) {
           onAddRow={handleAddRow}
           onUpdateRow={handleUpdateRow}
           onDeleteRow={handleDeleteRow}
+          onUpdateProperty={handleUpdateProperty}
           onDeleteProperty={handleDeleteProperty}
+          onAddProperty={handleAddProperty}
+          onDuplicateProperty={handleDuplicateProperty}
           onSortBy={handleSortBy}
           sortProp={sortProp}
           sortDir={sortDir}

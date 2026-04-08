@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 
 const SELECT_COLORS = {
   gray: 'var(--tag-gray)',
@@ -13,18 +13,202 @@ const SELECT_COLORS = {
   default: 'var(--tag-default)',
 };
 
+const COLOR_LIST = ['default', 'gray', 'brown', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'red'];
+
+const TYPE_ICONS = {
+  text: 'Aa',
+  number: '#',
+  select: '\u25BC',
+  checkbox: '\u2611',
+  date: '\uD83D\uDCC5',
+};
+
+const TYPE_LABELS = {
+  text: 'Text',
+  number: 'Number',
+  select: 'Select',
+  checkbox: 'Checkbox',
+  date: 'Date',
+};
+
 export default function DatabaseTableView({
   schema,
   rows,
   onAddRow,
   onUpdateRow,
   onDeleteRow,
+  onUpdateProperty,
   onDeleteProperty,
+  onAddProperty,
+  onDuplicateProperty,
   onSortBy,
   sortProp,
   sortDir,
 }) {
   const saveTimers = useRef({});
+  const [menuCol, setMenuCol] = useState(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [submenu, setSubmenu] = useState(null); // 'type' | 'options' | null
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [colorPickerOption, setColorPickerOption] = useState(null);
+  const [newOptionValue, setNewOptionValue] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const menuRef = useRef(null);
+  const renameInputRef = useRef(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuCol) return;
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        closeMenu();
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuCol]);
+
+  // Focus rename input when entering rename mode
+  useEffect(() => {
+    if (renaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renaming]);
+
+  const closeMenu = () => {
+    setMenuCol(null);
+    setSubmenu(null);
+    setRenaming(false);
+    setRenameValue('');
+    setColorPickerOption(null);
+    setNewOptionValue('');
+    setDeleteConfirm(false);
+  };
+
+  const handleHeaderClick = (col, e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const wrapperRect = e.currentTarget.closest('.database-table-wrapper')?.getBoundingClientRect();
+    setMenuPos({
+      top: rect.bottom - (wrapperRect?.top || 0),
+      left: rect.left - (wrapperRect?.left || 0),
+    });
+    setMenuCol(col);
+    setSubmenu(null);
+    setRenaming(false);
+    setDeleteConfirm(false);
+  };
+
+  const handleRenameStart = () => {
+    setRenaming(true);
+    setRenameValue(menuCol.name);
+    setSubmenu(null);
+  };
+
+  const handleRenameConfirm = () => {
+    const newName = renameValue.trim();
+    if (newName && newName !== menuCol.name && onUpdateProperty) {
+      onUpdateProperty(menuCol.id, { name: newName });
+    }
+    setRenaming(false);
+    closeMenu();
+  };
+
+  const handleRenameKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleRenameConfirm();
+    } else if (e.key === 'Escape') {
+      setRenaming(false);
+    }
+  };
+
+  const handleTypeChange = (newType) => {
+    if (newType === menuCol.type) return;
+    const updates = { type: newType };
+    if (newType === 'select' && !menuCol.options) {
+      updates.options = [
+        { value: 'Option 1', color: 'gray' },
+        { value: 'Option 2', color: 'blue' },
+        { value: 'Option 3', color: 'green' },
+      ];
+    }
+    if (onUpdateProperty) {
+      onUpdateProperty(menuCol.id, updates);
+    }
+    closeMenu();
+  };
+
+  const handleDuplicate = () => {
+    if (onDuplicateProperty) {
+      onDuplicateProperty(menuCol.id);
+    }
+    closeMenu();
+  };
+
+  const handleDelete = () => {
+    // Check if any rows have data in this column
+    const hasData = rows.some((r) => {
+      const val = (r.properties || {})[menuCol.id];
+      return val !== undefined && val !== '' && val !== false && val !== null;
+    });
+    if (hasData && !deleteConfirm) {
+      setDeleteConfirm(true);
+      return;
+    }
+    if (onDeleteProperty) {
+      onDeleteProperty(menuCol.id);
+    }
+    closeMenu();
+  };
+
+  // Options editing handlers
+  const handleOptionRename = (optIndex, newName) => {
+    if (!menuCol || !menuCol.options) return;
+    const oldValue = menuCol.options[optIndex].value;
+    const newOptions = menuCol.options.map((o, i) =>
+      i === optIndex ? { ...o, value: newName } : o
+    );
+    if (onUpdateProperty) {
+      onUpdateProperty(menuCol.id, { options: newOptions }, { renameOption: { from: oldValue, to: newName } });
+    }
+    // Update local menuCol so UI reflects the change
+    setMenuCol((prev) => ({ ...prev, options: newOptions }));
+  };
+
+  const handleOptionColorChange = (optIndex, color) => {
+    if (!menuCol || !menuCol.options) return;
+    const newOptions = menuCol.options.map((o, i) =>
+      i === optIndex ? { ...o, color } : o
+    );
+    if (onUpdateProperty) {
+      onUpdateProperty(menuCol.id, { options: newOptions });
+    }
+    setMenuCol((prev) => ({ ...prev, options: newOptions }));
+    setColorPickerOption(null);
+  };
+
+  const handleOptionDelete = (optIndex) => {
+    if (!menuCol || !menuCol.options) return;
+    const newOptions = menuCol.options.filter((_, i) => i !== optIndex);
+    if (onUpdateProperty) {
+      onUpdateProperty(menuCol.id, { options: newOptions });
+    }
+    setMenuCol((prev) => ({ ...prev, options: newOptions }));
+  };
+
+  const handleAddOption = () => {
+    if (!newOptionValue.trim() || !menuCol) return;
+    const colorIndex = (menuCol.options || []).length % COLOR_LIST.length;
+    const newOption = { value: newOptionValue.trim(), color: COLOR_LIST[colorIndex] };
+    const newOptions = [...(menuCol.options || []), newOption];
+    if (onUpdateProperty) {
+      onUpdateProperty(menuCol.id, { options: newOptions });
+    }
+    setMenuCol((prev) => ({ ...prev, options: newOptions }));
+    setNewOptionValue('');
+  };
 
   const handleCellEdit = useCallback((rowId, propId, value) => {
     const key = `${rowId}_${propId}`;
@@ -62,8 +246,10 @@ export default function DatabaseTableView({
     );
   };
 
+  const isTitle = (col) => col.id === 'title';
+
   return (
-    <div className="database-table-wrapper">
+    <div className="database-table-wrapper" style={{ position: 'relative' }}>
       <table className="database-table">
         <thead>
           <tr>
@@ -71,29 +257,23 @@ export default function DatabaseTableView({
               <th
                 key={col.id}
                 className="db-th"
-                onClick={() => onSortBy && onSortBy(col.id)}
-                title={`Sort by ${col.name}`}
+                onClick={(e) => handleHeaderClick(col, e)}
+                title={`Click to edit property "${col.name}"`}
               >
                 <div className="db-th-content">
+                  <span className="type-icon">{TYPE_ICONS[col.type] || 'Aa'}</span>
                   <span className="db-th-name">{col.name}</span>
-                  <span className="db-th-type">{col.type}</span>
                   {renderSortIndicator(col.id)}
                 </div>
-                {col.id !== 'title' && onDeleteProperty && (
-                  <button
-                    className="db-th-delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteProperty(col.id);
-                    }}
-                    title="Delete property"
-                  >
-                    &times;
-                  </button>
-                )}
               </th>
             ))}
-            <th className="db-th db-th-actions" style={{ width: '40px' }}></th>
+            <th
+              className="db-th db-th-add-property"
+              onClick={() => onAddProperty && onAddProperty()}
+              title="Add a property"
+            >
+              <span style={{ fontSize: '16px', color: 'var(--text-tertiary)' }}>+</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -129,6 +309,207 @@ export default function DatabaseTableView({
       <button className="db-add-row-btn" onClick={() => onAddRow()}>
         + New row
       </button>
+
+      {/* Property Menu */}
+      {menuCol && (
+        <div
+          ref={menuRef}
+          className="property-menu"
+          style={{ top: menuPos.top, left: menuPos.left }}
+        >
+          {/* Rename mode */}
+          {renaming ? (
+            <div style={{ padding: '4px' }}>
+              <input
+                ref={renameInputRef}
+                className="property-rename-input"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={handleRenameKeyDown}
+                onBlur={handleRenameConfirm}
+              />
+            </div>
+          ) : submenu === 'type' ? (
+            /* Type submenu */
+            <div className="property-menu-submenu">
+              <button
+                className="property-menu-item"
+                onClick={() => setSubmenu(null)}
+                style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}
+              >
+                ← Back
+              </button>
+              <div className="property-menu-separator" />
+              {Object.entries(TYPE_LABELS).map(([type, label]) => (
+                <button
+                  key={type}
+                  className="property-menu-item"
+                  onClick={() => handleTypeChange(type)}
+                  disabled={isTitle(menuCol) && type !== menuCol.type}
+                >
+                  <span className="type-option">
+                    <span className="type-icon">{TYPE_ICONS[type]}</span>
+                    <span>{label}</span>
+                  </span>
+                  {menuCol.type === type && (
+                    <span style={{ marginLeft: 'auto', color: 'var(--accent-blue)' }}>✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : submenu === 'options' ? (
+            /* Options editor submenu */
+            <div className="option-editor">
+              <button
+                className="property-menu-item"
+                onClick={() => setSubmenu(null)}
+                style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}
+              >
+                ← Back
+              </button>
+              <div className="property-menu-separator" />
+              {(menuCol.options || []).map((opt, idx) => (
+                <div key={idx} className="option-row">
+                  <div
+                    className="option-color-dot"
+                    style={{ background: SELECT_COLORS[opt.color] || SELECT_COLORS.default }}
+                    onClick={() => setColorPickerOption(colorPickerOption === idx ? null : idx)}
+                    title="Change color"
+                  />
+                  <input
+                    className="option-name-input"
+                    value={opt.value}
+                    onChange={(e) => {
+                      // Local update while typing
+                      const newOpts = menuCol.options.map((o, i) =>
+                        i === idx ? { ...o, value: e.target.value } : o
+                      );
+                      setMenuCol((prev) => ({ ...prev, options: newOpts }));
+                    }}
+                    onBlur={(e) => handleOptionRename(idx, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.target.blur();
+                      }
+                    }}
+                  />
+                  <span
+                    className="option-delete-btn"
+                    onClick={() => handleOptionDelete(idx)}
+                    title="Delete option"
+                  >
+                    ×
+                  </span>
+                  {colorPickerOption === idx && (
+                    <div className="option-color-picker">
+                      {COLOR_LIST.map((c) => (
+                        <div
+                          key={c}
+                          className="option-color-dot"
+                          style={{
+                            background: SELECT_COLORS[c],
+                            outline: opt.color === c ? '2px solid var(--accent-blue)' : 'none',
+                            outlineOffset: '1px',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOptionColorChange(idx, c);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <input
+                className="add-option-input"
+                placeholder="Add an option..."
+                value={newOptionValue}
+                onChange={(e) => setNewOptionValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddOption();
+                  if (e.key === 'Escape') setSubmenu(null);
+                }}
+              />
+            </div>
+          ) : (
+            /* Main menu */
+            <>
+              <div style={{ padding: '6px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {menuCol.name}
+              </div>
+              <button className="property-menu-item" onClick={handleRenameStart}>
+                <span style={{ width: '20px', textAlign: 'center' }}>✏️</span>
+                Rename
+              </button>
+              {!isTitle(menuCol) && (
+                <button className="property-menu-item" onClick={() => setSubmenu('type')}>
+                  <span style={{ width: '20px', textAlign: 'center' }}>{TYPE_ICONS[menuCol.type]}</span>
+                  Type
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                    {TYPE_LABELS[menuCol.type]} →
+                  </span>
+                </button>
+              )}
+              {menuCol.type === 'select' && (
+                <button className="property-menu-item" onClick={() => setSubmenu('options')}>
+                  <span style={{ width: '20px', textAlign: 'center' }}>⚙️</span>
+                  Edit options
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>→</span>
+                </button>
+              )}
+              <button className="property-menu-item" onClick={() => { onSortBy && onSortBy(menuCol.id); closeMenu(); }}>
+                <span style={{ width: '20px', textAlign: 'center' }}>↕</span>
+                Sort
+                {sortProp === menuCol.id && (
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>
+                    {sortDir === 'asc' ? 'Ascending' : 'Descending'}
+                  </span>
+                )}
+              </button>
+              {!isTitle(menuCol) && (
+                <button className="property-menu-item" onClick={handleDuplicate}>
+                  <span style={{ width: '20px', textAlign: 'center' }}>⧉</span>
+                  Duplicate
+                </button>
+              )}
+              {!isTitle(menuCol) && (
+                <>
+                  <div className="property-menu-separator" />
+                  {deleteConfirm ? (
+                    <div style={{ padding: '6px 10px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                        This column has data. Delete anyway?
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          className="property-menu-item danger"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                          onClick={handleDelete}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          className="property-menu-item"
+                          style={{ flex: 1, justifyContent: 'center' }}
+                          onClick={() => setDeleteConfirm(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button className="property-menu-item danger" onClick={handleDelete}>
+                      <span style={{ width: '20px', textAlign: 'center' }}>🗑</span>
+                      Delete property
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
