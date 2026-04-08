@@ -142,6 +142,7 @@ export function createRoutes(db) {
          LEFT JOIN page_tags pt ON p.id = pt.page_id
          LEFT JOIN tags t ON pt.tag_id = t.id
          WHERE p.title ILIKE $1 OR t.name ILIKE $1
+           OR p.id IN (SELECT DISTINCT page_id FROM blocks WHERE content ILIKE $1)
          ORDER BY p.position ASC`,
         [`%${query}%`]
       );

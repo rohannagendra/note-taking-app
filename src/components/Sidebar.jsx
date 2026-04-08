@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ProjectGroup from './ProjectGroup.jsx';
 import TagFilter from './TagFilter.jsx';
+import { searchPages } from '../lib/pages.js';
 
 export default function Sidebar({
   pages,
@@ -22,12 +23,34 @@ export default function Sidebar({
   activeTagId,
   onSelectTag,
   onSync,
+  theme,
+  onToggleTheme,
 }) {
   const [uncategorizedExpanded, setUncategorizedExpanded] = useState(true);
   const [pageMenu, setPageMenu] = useState(null); // { pageId, top, left }
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState(null);
+  const [serverSearchResults, setServerSearchResults] = useState(null);
+  const searchTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (!searchQuery) {
+      setServerSearchResults(null);
+      clearTimeout(searchTimerRef.current);
+      return;
+    }
+    clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchPages(searchQuery);
+        setServerSearchResults(results);
+      } catch {
+        // On error, keep using client-side filtering
+      }
+    }, 300);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQuery]);
 
   const handleSync = async () => {
     if (syncing) return;
