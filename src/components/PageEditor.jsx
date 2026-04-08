@@ -6,12 +6,15 @@ import IconPicker from './IconPicker.jsx';
 import TagInput from './TagInput.jsx';
 import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
+import { getBacklinks } from '../lib/pages.js';
 
 export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate }) {
   const [blocks, setBlocks] = useState([]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pageTags, setPageTags] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [backlinks, setBacklinks] = useState([]);
+  const [showBacklinks, setShowBacklinks] = useState(false);
   const [draggedBlockId, setDraggedBlockId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null); // { blockId, position: 'top'|'bottom' }
   const titleRef = useRef(null);
