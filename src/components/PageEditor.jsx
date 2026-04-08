@@ -8,11 +8,12 @@ import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
 import { getBacklinks } from '../lib/pages.js';
 
-export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange }) {
+export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange, onSaveAsTemplate }) {
   const [blocks, setBlocks] = useState([]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pageTags, setPageTags] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [savedAsTemplate, setSavedAsTemplate] = useState(false);
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [backlinks, setBacklinks] = useState([]);
   const [showBacklinks, setShowBacklinks] = useState(false);
@@ -397,6 +398,22 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
           <button className="page-toolbar-btn" onClick={handleCopy}>
             {copied ? '\u2713 Copied!' : '\ud83d\udccb Copy'}
           </button>
+          {onSaveAsTemplate && (
+            <button
+              className="page-toolbar-btn"
+              onClick={async () => {
+                try {
+                  await onSaveAsTemplate(page.id);
+                  setSavedAsTemplate(true);
+                  setTimeout(() => setSavedAsTemplate(false), 2000);
+                } catch (err) {
+                  console.error('Failed to save as template:', err);
+                }
+              }}
+            >
+              {savedAsTemplate ? '\u2713 Saved!' : '\ud83d\udccb Save as Template'}
+            </button>
+          )}
           <div className="font-selector">
             <button
               className="page-toolbar-btn"

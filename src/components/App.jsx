@@ -260,6 +260,23 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {isMobile && (
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setMobileSidebarOpen(true)}
+          aria-label="Open sidebar"
+        >
+          &#9776;
+        </button>
+      )}
+
+      {isMobile && mobileSidebarOpen && (
+        <div
+          className="sidebar-overlay visible"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar
         pages={displayedPages}
         activePage={activePage}
@@ -289,6 +306,8 @@ export default function App() {
         templates={templates}
         onUseTemplate={handleUseTemplate}
         onDeleteTemplate={handleDeleteTemplate}
+        isMobile={isMobile}
+        mobileSidebarOpen={mobileSidebarOpen}
       />
 
       {activePageObj ? (
