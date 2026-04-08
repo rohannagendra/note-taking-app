@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useRef } from 'react';
 
 const SELECT_COLORS = {
   gray: 'var(--tag-gray)',
@@ -20,6 +20,10 @@ export default function DatabaseBoardView({
   onUpdateRow,
   onDeleteRow,
 }) {
+  const [draggedCard, setDraggedCard] = useState(null);
+  const [dragOverColumn, setDragOverColumn] = useState(null);
+  const dragCounter = useRef({});
+
   // Find the grouping property — first select property, or 'status'
   const groupProp = useMemo(() => {
     const statusProp = schema.find((p) => p.id === 'status' && p.type === 'select');
@@ -72,6 +76,76 @@ export default function DatabaseBoardView({
     onAddRow({ [groupProp.id]: columnValue });
   }, [groupProp, onAddRow]);
 
+  // --- Drag & Drop handlers ---
+  const handleDragStart = useCallback((e, row, sourceColumnValue) => {
+    setDraggedCard({ rowId: row.id, sourceColumn: sourceColumnValue });
+    e.dataTransfer.effectAllowed = 'move';
+    // Set a minimal drag image data so the browser allows the drag
+    e.dataTransfer.setData('text/plain', row.id);
+    // Add dragging class after a tick so the browser captures the element first
+    requestAnimationFrame(() => {
+      e.target.classList.add('dragging');
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((e) => {
+    e.target.classList.remove('dragging');
+    setDraggedCard(null);
+    setDragOverColumn(null);
+    dragCounter.current = {};
+  }, []);
+
+  const handleColumnDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleColumnDragEnter = useCallback((e, columnValue) => {
+    e.preventDefault();
+    if (!dragCounter.current[columnValue]) {
+      dragCounter.current[columnValue] = 0;
+    }
+    dragCounter.current[columnValue]++;
+    setDragOverColumn(columnValue);
+  }, []);
+
+  const handleColumnDragLeave = useCallback((e, columnValue) => {
+    if (dragCounter.current[columnValue]) {
+      dragCounter.current[columnValue]--;
+    }
+    if (dragCounter.current[columnValue] <= 0) {
+      dragCounter.current[columnValue] = 0;
+      setDragOverColumn((prev) => prev === columnValue ? null : prev);
+    }
+  }, []);
+
+  const handleColumnDrop = useCallback((e, targetColumnValue) => {
+    e.preventDefault();
+    setDragOverColumn(null);
+    dragCounter.current = {};
+
+    if (!draggedCard || !groupProp) return;
+    if (draggedCard.sourceColumn === targetColumnValue) {
+      setDraggedCard(null);
+      return;
+    }
+
+    // Find the row and update its property
+    const row = rows.find((r) => r.id === draggedCard.rowId);
+    if (!row) {
+      setDraggedCard(null);
+      return;
+    }
+
+    const updatedProperties = {
+      ...row.properties,
+      [groupProp.id]: targetColumnValue === 'No value' ? '' : targetColumnValue,
+    };
+
+    onUpdateRow(row.id, updatedProperties);
+    setDraggedCard(null);
+  }, [draggedCard, groupProp, rows, onUpdateRow]);
+
   if (!groupProp) {
     return (
       <div className="database-board-no-select">
@@ -84,7 +158,14 @@ export default function DatabaseBoardView({
   return (
     <div className="database-board">
       {columns.map((col) => (
-        <div key={col.value} className="board-column">
+        <div
+          key={col.value}
+          className={`board-column${dragOverColumn === col.value ? ' drag-over' : ''}`}
+          onDragOver={handleColumnDragOver}
+          onDragEnter={(e) => handleColumnDragEnter(e, col.value)}
+          onDragLeave={(e) => handleColumnDragLeave(e, col.value)}
+          onDrop={(e) => handleColumnDrop(e, col.value)}
+        >
           <div className="board-column-header">
             <span
               className="board-column-tag"
@@ -99,7 +180,13 @@ export default function DatabaseBoardView({
               const props = row.properties || {};
               const title = props[titleProp?.id] || 'Untitled';
               return (
-                <div key={row.id} className="board-card">
+                <div
+                  key={row.id}
+                  className="board-card"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, row, col.value)}
+                  onDragEnd={handleDragEnd}
+                >
                   <div className="board-card-title">{title}</div>
                   <div className="board-card-props">
                     {otherProps.map((p) => {

@@ -2381,6 +2381,7 @@ body {
 .database-container {
   width: 100%;
   margin-top: 24px;
+  margin-bottom: 40px;
   border-top: 1px solid var(--border-default);
   padding-top: 16px;
 }
@@ -3177,7 +3178,7 @@ body {
   border: 1px solid var(--border-default);
   border-radius: 6px;
   box-shadow: 0 3px 12px rgba(15, 15, 15, 0.15);
-  z-index: 200;
+  z-index: 300;
   min-width: 220px;
   padding: 4px;
   max-height: 400px;
@@ -3467,3 +3468,38 @@ body {
 .database-link-option { display: flex; align-items: center; width: 100%; padding: 6px 10px; border: none; background: none; cursor: pointer; border-radius: 4px; font-size: 13px; color: var(--text-primary); text-align: left; }
 .database-link-option:hover { background: var(--bg-hover); }
 [data-theme="dark"] .database-link-picker { background: #2f2f2f; border-color: rgba(255,255,255,0.1); }
+
+/* ============================================
+   BOARD VIEW DRAG & DROP
+   ============================================ */
+.board-card.dragging {
+  opacity: 0.3;
+}
+
+.board-column.drag-over .board-column-cards {
+  border: 2px dashed var(--accent-blue);
+  border-radius: 4px;
+  background: var(--accent-blue-bg);
+}
+
+.board-column.drag-over .board-column-cards::after {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  margin-top: 4px;
+}
+
+.board-card {
+  cursor: grab;
+}
+
+.board-card:active {
+  cursor: grabbing;
+}
+
+[data-theme="dark"] .board-column.drag-over .board-column-cards {
+  border-color: var(--accent-blue);
+  background: rgba(35, 131, 226, 0.12);
+}
