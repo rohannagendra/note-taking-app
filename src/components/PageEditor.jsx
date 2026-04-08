@@ -7,6 +7,7 @@ import TagInput from './TagInput.jsx';
 import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
 import { getBacklinks } from '../lib/pages.js';
+import DatabaseView from './DatabaseView.jsx';
 
 export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange, onSaveAsTemplate, allPages }) {
   const [blocks, setBlocks] = useState([]);
