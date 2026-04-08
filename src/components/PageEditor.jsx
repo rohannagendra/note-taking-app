@@ -42,6 +42,22 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
     return () => { cancelled = true; };
   }, [page?.id]);
 
+  // Load backlinks when page changes
+  useEffect(() => {
+    if (!page) return;
+    let cancelled = false;
+    async function loadBacklinks() {
+      try {
+        const links = await getBacklinks(page.id);
+        if (!cancelled) setBacklinks(links);
+      } catch {
+        if (!cancelled) setBacklinks([]);
+      }
+    }
+    loadBacklinks();
+    return () => { cancelled = true; };
+  }, [page?.id]);
+
   const handleTagRefresh = useCallback(async () => {
     const tags = await getPageTags(page.id);
     setPageTags(tags);
@@ -393,6 +409,32 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
         >
           + Add a block
         </div>
+
+        {/* Backlinks */}
+        {backlinks.length > 0 && (
+          <div className="backlinks-section">
+            <div
+              className="backlinks-header"
+              onClick={() => setShowBacklinks((v) => !v)}
+            >
+              {showBacklinks ? '\u2199\uFE0F' : '\u2199'} {backlinks.length} backlink{backlinks.length !== 1 ? 's' : ''}
+            </div>
+            {showBacklinks && (
+              <div className="backlinks-list">
+                {backlinks.map((link) => (
+                  <div
+                    key={link.id}
+                    className="backlink-item"
+                    onClick={() => onNavigate && onNavigate(link.id)}
+                  >
+                    <span>{link.icon || '\ud83d\udcc4'}</span>
+                    <span>{link.title || 'Untitled'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

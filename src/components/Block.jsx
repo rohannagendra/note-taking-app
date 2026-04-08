@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import TextBlock from './blocks/TextBlock.jsx';
 import HeadingBlock from './blocks/HeadingBlock.jsx';
 import ListBlock from './blocks/ListBlock.jsx';
@@ -9,6 +9,8 @@ import DividerBlock from './blocks/DividerBlock.jsx';
 import TableBlock from './blocks/TableBlock.jsx';
 import ImageBlock from './blocks/ImageBlock.jsx';
 import MentionBlock from './blocks/MentionBlock.jsx';
+import BlockComments from './BlockComments.jsx';
+import { getComments } from '../lib/blocks.js';
 
 function getEditableElement(wrapper) {
   if (!wrapper) return null;
@@ -36,6 +38,18 @@ const Block = React.forwardRef(function Block(
   ref
 ) {
   const wrapperRef = useRef(null);
+  const [showComments, setShowComments] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    getComments(block.id)
+      .then((data) => {
+        if (!cancelled) setCommentCount(data.length);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [block.id]);
 
   // Expose focus method via the forwarded ref
   React.useImperativeHandle(ref, () => ({
@@ -143,6 +157,21 @@ const Block = React.forwardRef(function Block(
       <div className="block-content">
         {renderBlock()}
       </div>
+      <button
+        className="block-comment-btn"
+        onClick={() => setShowComments((v) => !v)}
+        title="Comments"
+      >
+        {'\uD83D\uDCAC'}
+        {commentCount > 0 && <span className="comment-badge">{commentCount}</span>}
+      </button>
+      {showComments && (
+        <BlockComments
+          blockId={block.id}
+          onClose={() => setShowComments(false)}
+          onCountChange={setCommentCount}
+        />
+      )}
     </div>
   );
 });

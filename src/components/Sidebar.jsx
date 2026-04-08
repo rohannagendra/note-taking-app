@@ -22,6 +22,7 @@ export default function Sidebar({
   allTags,
   activeTagId,
   onSelectTag,
+  onToggleFavorite,
   onSync,
   onImport,
   theme,
@@ -29,6 +30,7 @@ export default function Sidebar({
   sortBy,
   onSortChange,
 }) {
+  const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const [uncategorizedExpanded, setUncategorizedExpanded] = useState(true);
   const [pageMenu, setPageMenu] = useState(null); // { pageId, top, left }
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
@@ -207,6 +209,56 @@ export default function Sidebar({
 
         {/* Content */}
         <div className="sidebar-content">
+          {/* Favorites section */}
+          {pages.filter(p => p.is_favorite).length > 0 && (
+            <div className="sidebar-section favorites-section">
+              <div
+                className="sidebar-section-header"
+                onClick={() => setFavoritesExpanded(v => !v)}
+              >
+                <div className="sidebar-section-title">
+                  <span className={`chevron${favoritesExpanded ? '' : ' collapsed'}`}>
+                    &#9662;
+                  </span>
+                  Favorites
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: 'var(--text-tertiary)',
+                      marginLeft: '4px',
+                      textTransform: 'none',
+                      letterSpacing: '0',
+                    }}
+                  >
+                    {pages.filter(p => p.is_favorite).length}
+                  </span>
+                </div>
+              </div>
+              {favoritesExpanded && pages.filter(p => p.is_favorite).map(page => (
+                <div
+                  key={`fav-${page.id}`}
+                  className={`sidebar-page-item${activePage === page.id ? ' active' : ''}`}
+                  onClick={() => onSelectPage(page.id)}
+                >
+                  <span className="page-icon">{page.icon || '📄'}</span>
+                  <span className="page-title">{page.title || 'Untitled'}</span>
+                  <div className="page-actions">
+                    <button
+                      className="icon-btn favorite-star active"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(page.id, false);
+                      }}
+                      title="Remove from favorites"
+                    >
+                      &#9733;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Project groups */}
           {sortedProjects.map((proj) => (
             <ProjectGroup
@@ -304,7 +356,7 @@ export default function Sidebar({
               </div>
             )}
 
-            {filteredPages.length === 0 && searchQuery && (
+            {sortedFilteredPages.length === 0 && searchQuery && (
               <div
                 style={{
                   padding: '12px 24px',
