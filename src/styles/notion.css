@@ -1712,3 +1712,38 @@ body {
 [data-theme="dark"] .color-picker-dropdown {
   background: #2f2f2f;
 }
+
+/* ============================================
+   BLOCK DRAG & DROP
+   ============================================ */
+.block-wrapper.dragging {
+  opacity: 0.3;
+}
+
+.block-wrapper.drag-over-top::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.block-wrapper.drag-over-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  z-index: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}

@@ -18,7 +18,21 @@ function getEditableElement(wrapper) {
 }
 
 const Block = React.forwardRef(function Block(
-  { block, onUpdate, onDelete, onAddBlock, onFocusBlock, blockIndex, onNavigate },
+  {
+    block,
+    onUpdate,
+    onDelete,
+    onAddBlock,
+    onFocusBlock,
+    blockIndex,
+    onNavigate,
+    onDragStart,
+    onDragOver,
+    onDrop,
+    onDragEnd,
+    isDragging,
+    dragOverPosition,
+  },
   ref
 ) {
   const wrapperRef = useRef(null);
@@ -42,6 +56,34 @@ const Block = React.forwardRef(function Block(
       return wrapperRef.current;
     },
   }));
+
+  const handleDragStart = useCallback((e) => {
+    // Set drag data and visual feedback
+    e.dataTransfer.setData('text/plain', block.id);
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) onDragStart(block.id);
+  }, [block.id, onDragStart]);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (onDragOver) onDragOver(block.id, e);
+  }, [block.id, onDragOver]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    if (onDrop) onDrop(block.id);
+  }, [block.id, onDrop]);
+
+  const handleDragEnd = useCallback(() => {
+    if (onDragEnd) onDragEnd();
+  }, [onDragEnd]);
+
+  // Build class names for drag state
+  let wrapperClass = 'block-wrapper';
+  if (isDragging) wrapperClass += ' dragging';
+  if (dragOverPosition === 'top') wrapperClass += ' drag-over-top';
+  if (dragOverPosition === 'bottom') wrapperClass += ' drag-over-bottom';
 
   const renderBlock = () => {
     const commonProps = {
@@ -84,8 +126,20 @@ const Block = React.forwardRef(function Block(
   };
 
   return (
-    <div className="block-wrapper" ref={wrapperRef} data-block-id={block.id}>
-      <span className="drag-handle" aria-hidden="true">&#x2801;&#x2802;</span>
+    <div
+      className={wrapperClass}
+      ref={wrapperRef}
+      data-block-id={block.id}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
+    >
+      <span
+        className="drag-handle"
+        aria-hidden="true"
+        draggable
+        onDragStart={handleDragStart}
+      >&#x2801;&#x2802;</span>
       <div className="block-content">
         {renderBlock()}
       </div>

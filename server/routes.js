@@ -210,6 +210,10 @@ export function createRoutes(db) {
         fields.push(`position = $${paramIndex++}`);
         values.push(updates.position);
       }
+      if (updates.is_favorite !== undefined) {
+        fields.push(`is_favorite = $${paramIndex++}`);
+        values.push(updates.is_favorite);
+      }
 
       fields.push(`updated_at = NOW()`);
 
@@ -555,6 +559,24 @@ export function createRoutes(db) {
          WHERE pt.tag_id = $1
          ORDER BY p.position ASC`,
         [req.params.tagId]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ============ BACKLINKS ============
+
+  // GET /api/pages/:id/backlinks
+  router.get('/pages/:id/backlinks', async (req, res) => {
+    try {
+      const result = await db.query(
+        `SELECT DISTINCT p.id, p.title, p.icon FROM pages p
+         INNER JOIN blocks b ON b.page_id = p.id
+         WHERE b.type = 'mention' AND b.content = $1
+         ORDER BY p.title ASC`,
+        [req.params.id]
       );
       res.json(result.rows);
     } catch (err) {

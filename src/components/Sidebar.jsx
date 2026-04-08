@@ -26,12 +26,16 @@ export default function Sidebar({
   onImport,
   theme,
   onToggleTheme,
+  sortBy,
+  onSortChange,
 }) {
   const [uncategorizedExpanded, setUncategorizedExpanded] = useState(true);
   const [pageMenu, setPageMenu] = useState(null); // { pageId, top, left }
   const [moveSubmenuOpen, setMoveSubmenuOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState(null);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef(null);
   const importFileRef = useRef(null);
 
   const handleImportFile = (e) => {
@@ -80,18 +84,53 @@ export default function Sidebar({
     }
   };
 
+  // Close sort dropdown on click outside
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const handleClickOutside = (e) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sortDropdownOpen]);
+
+  const sortOptions = [
+    { value: 'manual', label: 'Manual (position)' },
+    { value: 'title-asc', label: 'Title A\u2192Z' },
+    { value: 'title-desc', label: 'Title Z\u2192A' },
+    { value: 'created-new', label: 'Created newest' },
+    { value: 'created-old', label: 'Created oldest' },
+    { value: 'modified-new', label: 'Modified newest' },
+    { value: 'modified-old', label: 'Modified oldest' },
+  ];
+
   const filteredPages = searchQuery
     ? pages.filter((p) =>
         (p.title || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
     : pages;
 
+  // Sort filtered pages
+  const sortedFilteredPages = [...filteredPages].sort((a, b) => {
+    switch (sortBy) {
+      case 'title-asc': return (a.title || '').localeCompare(b.title || '');
+      case 'title-desc': return (b.title || '').localeCompare(a.title || '');
+      case 'created-new': return new Date(b.created_at) - new Date(a.created_at);
+      case 'created-old': return new Date(a.created_at) - new Date(b.created_at);
+      case 'modified-new': return new Date(b.updated_at) - new Date(a.updated_at);
+      case 'modified-old': return new Date(a.updated_at) - new Date(b.updated_at);
+      default: return (a.position || 0) - (b.position || 0);
+    }
+  });
+
   // Group pages by project
   const sortedProjects = [...(projects || [])].sort((a, b) => a.position - b.position);
-  const uncategorizedPages = filteredPages.filter((p) => !p.project_id);
+  const uncategorizedPages = sortedFilteredPages.filter((p) => !p.project_id);
   const pagesByProject = {};
   sortedProjects.forEach((proj) => {
-    pagesByProject[proj.id] = filteredPages.filter((p) => p.project_id === proj.id);
+    pagesByProject[proj.id] = sortedFilteredPages.filter((p) => p.project_id === proj.id);
   });
 
   const handlePageContextMenu = (e, pageId) => {

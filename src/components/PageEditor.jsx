@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getBlocks, addBlock, updateBlock, deleteBlock } from '../lib/blocks.js';
+import { getBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from '../lib/blocks.js';
 import { blocksToMarkdown, blocksToHtml, downloadMarkdown } from '../lib/export.js';
 import Block from './Block.jsx';
 import IconPicker from './IconPicker.jsx';
@@ -12,6 +12,8 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pageTags, setPageTags] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [draggedBlockId, setDraggedBlockId] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null); // { blockId, position: 'top'|'bottom' }
   const titleRef = useRef(null);
   const blockRefs = useRef({});
   const focusTargetRef = useRef(null);
@@ -190,6 +192,63 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
     }
   }, [blocks]);
 
+  // --- Drag & Drop handlers ---
+  const handleBlockDragStart = useCallback((blockId) => {
+    setDraggedBlockId(blockId);
+  }, []);
+
+  const handleBlockDragOver = useCallback((targetBlockId, e) => {
+    if (!draggedBlockId || targetBlockId === draggedBlockId) {
+      setDropTarget(null);
+      return;
+    }
+    const el = blockRefs.current[targetBlockId];
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const position = e.clientY < midY ? 'top' : 'bottom';
+    setDropTarget((prev) => {
+      if (prev && prev.blockId === targetBlockId && prev.position === position) return prev;
+      return { blockId: targetBlockId, position };
+    });
+  }, [draggedBlockId]);
+
+  const handleBlockDrop = useCallback(async () => {
+    if (!draggedBlockId || !dropTarget) {
+      setDraggedBlockId(null);
+      setDropTarget(null);
+      return;
+    }
+
+    const dragIdx = blocks.findIndex((b) => b.id === draggedBlockId);
+    const dropIdx = blocks.findIndex((b) => b.id === dropTarget.blockId);
+    if (dragIdx === -1 || dropIdx === -1) {
+      setDraggedBlockId(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Build new order
+    const newBlocks = blocks.filter((b) => b.id !== draggedBlockId);
+    const draggedBlock = blocks[dragIdx];
+    let insertIdx = newBlocks.findIndex((b) => b.id === dropTarget.blockId);
+    if (dropTarget.position === 'bottom') insertIdx += 1;
+    newBlocks.splice(insertIdx, 0, draggedBlock);
+
+    setBlocks(newBlocks);
+    setDraggedBlockId(null);
+    setDropTarget(null);
+
+    // Persist new order to database
+    const blockIds = newBlocks.map((b) => b.id);
+    await reorderBlocks(page.id, blockIds);
+  }, [draggedBlockId, dropTarget, blocks, page?.id]);
+
+  const handleBlockDragEnd = useCallback(() => {
+    setDraggedBlockId(null);
+    setDropTarget(null);
+  }, []);
+
   const handleExport = useCallback(() => {
     const md = blocksToMarkdown(blocks, page.title);
     downloadMarkdown(md, page.title);
@@ -304,6 +363,16 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
                 onAddBlock={handleAddBlock}
                 onFocusBlock={handleFocusBlock}
                 onNavigate={onNavigate}
+                onDragStart={handleBlockDragStart}
+                onDragOver={handleBlockDragOver}
+                onDrop={handleBlockDrop}
+                onDragEnd={handleBlockDragEnd}
+                isDragging={draggedBlockId === block.id}
+                dragOverPosition={
+                  dropTarget && dropTarget.blockId === block.id
+                    ? dropTarget.position
+                    : null
+                }
               />
             </div>
           ))}

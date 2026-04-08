@@ -32,6 +32,10 @@ export async function deletePage(id) {
   });
 }
 
+export async function toggleFavorite(id, isFavorite) {
+  return apiFetch(`/pages/${id}`, { method: 'PATCH', body: { is_favorite: isFavorite } });
+}
+
 export async function searchPages(query) {
   return apiFetch(`/pages/search?q=${encodeURIComponent(query)}`);
 }
@@ -42,4 +46,8 @@ export async function syncToMarkdown() {
 
 export async function importMarkdown(markdown, title) {
   return apiFetch('/import', { method: 'POST', body: { markdown, title } });
+}
+
+export async function getBacklinks(pageId) {
+  return apiFetch(`/pages/${pageId}/backlinks`);
 }
