@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDB } from '../lib/db.js';
-import { getPages, createPage, updatePage, deletePage, toggleFavorite, syncToMarkdown, importMarkdown } from '../lib/pages.js';
+import { getPages, createPage, updatePage, deletePage, toggleFavorite, syncToMarkdown, importMarkdown, getTemplates, useTemplate, saveAsTemplate, deleteTemplate } from '../lib/pages.js';
 import {
   getProjects,
   createProject,
@@ -22,13 +22,39 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState(() => localStorage.getItem('note-sort') || 'manual');
+  const [templates, setTemplates] = useState([]);
   const [theme, setTheme] = useState(() => localStorage.getItem('note-theme') || 'light');
+  const [fontFamily, setFontFamily] = useState(() => localStorage.getItem('note-font') || 'sans');
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Detect mobile on resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setMobileSidebarOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Theme management
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('note-theme', theme);
   }, [theme]);
+
+  // Font management
+  useEffect(() => {
+    const fontMap = {
+      sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif',
+      serif: 'Lyon-Text, Georgia, "Times New Roman", Times, serif',
+      mono: 'iawriter-mono, Nitti, Menlo, Courier, monospace',
+    };
+    document.documentElement.style.setProperty('--font-body', fontMap[fontFamily]);
+    localStorage.setItem('note-font', fontFamily);
+  }, [fontFamily]);
 
   const toggleTheme = useCallback(() => {
     setTheme((t) => (t === 'light' ? 'dark' : 'light'));
@@ -39,14 +65,16 @@ export default function App() {
     async function init() {
       await getDB();
       setDbReady(true);
-      const [loadedPages, loadedProjects, loadedTags] = await Promise.all([
+      const [loadedPages, loadedProjects, loadedTags, loadedTemplates] = await Promise.all([
         getPages(),
         getProjects(),
         getTags(),
+        getTemplates(),
       ]);
       setPages(loadedPages);
       setProjects(loadedProjects);
       setAllTags(loadedTags);
+      setTemplates(loadedTemplates);
       if (loadedPages.length > 0) {
         setActivePage(loadedPages[0].id);
       }
@@ -102,7 +130,8 @@ export default function App() {
 
   const handleSelectPage = useCallback((pageId) => {
     setActivePage(pageId);
-  }, []);
+    if (isMobile) setMobileSidebarOpen(false);
+  }, [isMobile]);
 
   const handleUpdatePage = useCallback(async (pageId, updates) => {
     await updatePage(pageId, updates);
@@ -152,6 +181,25 @@ export default function App() {
     setPages(prev => prev.map(p => p.id === pageId ? { ...p, is_favorite: isFavorite } : p));
   }, []);
 
+  // --- Template handlers ---
+
+  const handleUseTemplate = useCallback(async (templateId) => {
+    const newPage = await useTemplate(templateId);
+    setPages((prev) => [...prev, newPage]);
+    setActivePage(newPage.id);
+  }, []);
+
+  const handleSaveAsTemplate = useCallback(async (pageId) => {
+    const newTemplate = await saveAsTemplate(pageId);
+    setTemplates((prev) => [newTemplate, ...prev]);
+    return newTemplate;
+  }, []);
+
+  const handleDeleteTemplate = useCallback(async (templateId) => {
+    await deleteTemplate(templateId);
+    setTemplates((prev) => prev.filter((t) => t.id !== templateId));
+  }, []);
+
   // --- Sync handler ---
 
   const handleSync = useCallback(async () => {
@@ -171,8 +219,12 @@ export default function App() {
   // --- Sidebar toggle ---
 
   const handleToggleCollapse = useCallback(() => {
-    setSidebarCollapsed((v) => !v);
-  }, []);
+    if (isMobile) {
+      setMobileSidebarOpen((v) => !v);
+    } else {
+      setSidebarCollapsed((v) => !v);
+    }
+  }, [isMobile]);
 
   // Persist sort preference
   useEffect(() => {
@@ -234,6 +286,9 @@ export default function App() {
         onSortChange={setSortBy}
         theme={theme}
         onToggleTheme={toggleTheme}
+        templates={templates}
+        onUseTemplate={handleUseTemplate}
+        onDeleteTemplate={handleDeleteTemplate}
       />
 
       {activePageObj ? (
@@ -244,6 +299,9 @@ export default function App() {
           allTags={allTags}
           onRefreshTags={refreshTags}
           onNavigate={handleSelectPage}
+          fontFamily={fontFamily}
+          onFontChange={setFontFamily}
+          onSaveAsTemplate={handleSaveAsTemplate}
         />
       ) : (
         <div className="page-editor-empty">

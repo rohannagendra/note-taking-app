@@ -29,7 +29,11 @@ export default function Sidebar({
   onToggleTheme,
   sortBy,
   onSortChange,
+  templates,
+  onUseTemplate,
+  onDeleteTemplate,
 }) {
+  const [templatesExpanded, setTemplatesExpanded] = useState(true);
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const [uncategorizedExpanded, setUncategorizedExpanded] = useState(true);
   const [pageMenu, setPageMenu] = useState(null); // { pageId, top, left }
@@ -234,6 +238,58 @@ export default function Sidebar({
           activeTagId={activeTagId}
           onSelectTag={onSelectTag}
         />
+
+        {/* Templates section */}
+        {templates && templates.length > 0 && (
+          <div className="sidebar-section templates-section" style={{ padding: '0 8px' }}>
+            <div
+              className="sidebar-section-header"
+              onClick={() => setTemplatesExpanded((v) => !v)}
+            >
+              <div className="sidebar-section-title">
+                <span className={`chevron${templatesExpanded ? '' : ' collapsed'}`}>
+                  &#9662;
+                </span>
+                Templates
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--text-tertiary)',
+                    marginLeft: '4px',
+                    textTransform: 'none',
+                    letterSpacing: '0',
+                  }}
+                >
+                  {templates.length}
+                </span>
+              </div>
+            </div>
+            {templatesExpanded &&
+              templates.map((template) => (
+                <div
+                  key={template.id}
+                  className="sidebar-page-item template-item"
+                  onClick={() => onUseTemplate && onUseTemplate(template.id)}
+                  title={`Create page from "${template.name}"`}
+                >
+                  <span className="page-icon">{template.icon || '📋'}</span>
+                  <span className="page-title">{template.name || 'Untitled Template'}</span>
+                  <div className="page-actions">
+                    <button
+                      className="icon-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onDeleteTemplate) onDeleteTemplate(template.id);
+                      }}
+                      title="Delete template"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
 
         {/* Content */}
         <div className="sidebar-content">

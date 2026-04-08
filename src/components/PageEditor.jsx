@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from '../lib/blocks.js';
-import { blocksToMarkdown, blocksToHtml, downloadMarkdown } from '../lib/export.js';
+import { blocksToMarkdown, blocksToHtml, downloadMarkdown, exportTableToCSV, downloadCSV, downloadPDF } from '../lib/export.js';
 import Block from './Block.jsx';
 import IconPicker from './IconPicker.jsx';
 import TagInput from './TagInput.jsx';
@@ -8,16 +8,20 @@ import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
 import { getBacklinks } from '../lib/pages.js';
 
-export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate }) {
+export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange }) {
   const [blocks, setBlocks] = useState([]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pageTags, setPageTags] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [showFontMenu, setShowFontMenu] = useState(false);
   const [backlinks, setBacklinks] = useState([]);
   const [showBacklinks, setShowBacklinks] = useState(false);
+  const [showCoverGradients, setShowCoverGradients] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [draggedBlockId, setDraggedBlockId] = useState(null);
   const [dropTarget, setDropTarget] = useState(null); // { blockId, position: 'top'|'bottom' }
   const titleRef = useRef(null);
+  const coverInputRef = useRef(null);
   const blockRefs = useRef({});
   const focusTargetRef = useRef(null);
   const saveTimer = useRef(null);
@@ -268,9 +272,56 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
     setDropTarget(null);
   }, []);
 
-  const handleExport = useCallback(() => {
+  const GRADIENT_PRESETS = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+  ];
+
+  const handleCoverUpload = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be smaller than 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      onUpdatePage(page.id, { cover_image: reader.result });
+    };
+    reader.readAsDataURL(file);
+    if (coverInputRef.current) coverInputRef.current.value = '';
+  }, [page?.id, onUpdatePage]);
+
+  const handleRemoveCover = useCallback(() => {
+    onUpdatePage(page.id, { cover_image: null });
+    setShowCoverGradients(false);
+  }, [page?.id, onUpdatePage]);
+
+  const handleSelectGradient = useCallback((gradient) => {
+    onUpdatePage(page.id, { cover_image: gradient });
+    setShowCoverGradients(false);
+  }, [page?.id, onUpdatePage]);
+
+  const handleExportMarkdown = useCallback(() => {
     const md = blocksToMarkdown(blocks, page.title);
     downloadMarkdown(md, page.title);
+    setShowExportDropdown(false);
+  }, [blocks, page?.title]);
+
+  const handleExportCSV = useCallback(() => {
+    const csv = exportTableToCSV(blocks, page.title);
+    downloadCSV(csv, page.title);
+    setShowExportDropdown(false);
+  }, [blocks, page?.title]);
+
+  const handleExportPDF = useCallback(() => {
+    downloadPDF(blocks, page.title);
+    setShowExportDropdown(false);
   }, [blocks, page?.title]);
 
   const handleCopy = useCallback(async () => {
@@ -319,12 +370,69 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
       <div className="page-editor">
         {/* Toolbar */}
         <div className="page-toolbar">
-          <button className="page-toolbar-btn" onClick={handleExport}>
-            <span>&#8595;</span> Export to Markdown
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="page-toolbar-btn"
+              onClick={() => setShowExportDropdown((v) => !v)}
+            >
+              <span>&#8595;</span> Export
+            </button>
+            {showExportDropdown && (
+              <div
+                className="export-dropdown"
+                onMouseLeave={() => setShowExportDropdown(false)}
+              >
+                <button className="export-option" onClick={handleExportMarkdown}>
+                  Markdown (.md)
+                </button>
+                <button className="export-option" onClick={handleExportCSV}>
+                  CSV (.csv)
+                </button>
+                <button className="export-option" onClick={handleExportPDF}>
+                  PDF
+                </button>
+              </div>
+            )}
+          </div>
           <button className="page-toolbar-btn" onClick={handleCopy}>
             {copied ? '\u2713 Copied!' : '\ud83d\udccb Copy'}
           </button>
+          <div className="font-selector">
+            <button
+              className="page-toolbar-btn"
+              onClick={() => setShowFontMenu((v) => !v)}
+              title="Change font"
+            >
+              <span style={{ fontFamily: fontFamily === 'serif' ? 'Georgia, serif' : fontFamily === 'mono' ? 'Menlo, monospace' : 'inherit' }}>Aa</span>
+              {' '}
+              {fontFamily === 'sans' ? 'Sans-serif' : fontFamily === 'serif' ? 'Serif' : 'Mono'}
+            </button>
+            {showFontMenu && (
+              <div className="font-dropdown">
+                <button
+                  className={'font-option' + (fontFamily === 'sans' ? ' active' : '')}
+                  style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}
+                  onClick={() => { onFontChange('sans'); setShowFontMenu(false); }}
+                >
+                  Aa Sans-serif
+                </button>
+                <button
+                  className={'font-option' + (fontFamily === 'serif' ? ' active' : '')}
+                  style={{ fontFamily: 'Georgia, "Times New Roman", Times, serif' }}
+                  onClick={() => { onFontChange('serif'); setShowFontMenu(false); }}
+                >
+                  Aa Serif
+                </button>
+                <button
+                  className={'font-option' + (fontFamily === 'mono' ? ' active' : '')}
+                  style={{ fontFamily: 'Menlo, Courier, monospace' }}
+                  onClick={() => { onFontChange('mono'); setShowFontMenu(false); }}
+                >
+                  Aa Mono
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Page Icon */}

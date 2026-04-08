@@ -214,6 +214,10 @@ export function createRoutes(db) {
         fields.push(`is_favorite = $${paramIndex++}`);
         values.push(updates.is_favorite);
       }
+      if (updates.cover_image !== undefined) {
+        fields.push(`cover_image = $${paramIndex++}`);
+        values.push(updates.cover_image);
+      }
 
       fields.push(`updated_at = NOW()`);
 
@@ -798,6 +802,156 @@ export function createRoutes(db) {
       });
     } catch (err) {
       console.error('Sync error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ============ TEMPLATES ============
+
+  // GET /api/templates
+  router.get('/templates', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM templates ORDER BY created_at DESC'
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/templates
+  router.post('/templates', async (req, res) => {
+    try {
+      const { name, icon, blocks_json } = req.body;
+      const id = crypto.randomUUID();
+      await db.query(
+        `INSERT INTO templates (id, name, icon, blocks_json)
+         VALUES ($1, $2, $3, $4)`,
+        [id, name || 'Untitled Template', icon || '📋', blocks_json || '[]']
+      );
+      const result = await db.query('SELECT * FROM templates WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/templates/:id
+  router.delete('/templates/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM templates WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/templates/:id/use — create a new page from a template
+  router.post('/templates/:id/use', async (req, res) => {
+    try {
+      const templateResult = await db.query(
+        'SELECT * FROM templates WHERE id = $1',
+        [req.params.id]
+      );
+      if (templateResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Template not found' });
+      }
+      const template = templateResult.rows[0];
+
+      // Create a new page with the template's name and icon
+      const pageId = crypto.randomUUID();
+      const posResult = await db.query(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM pages'
+      );
+      const position = posResult.rows[0].pos;
+
+      await db.query(
+        `INSERT INTO pages (id, title, icon, position)
+         VALUES ($1, $2, $3, $4)`,
+        [pageId, template.name, template.icon || '📄', position]
+      );
+
+      // Parse blocks_json and create each block
+      let templateBlocks = [];
+      try {
+        templateBlocks = JSON.parse(template.blocks_json || '[]');
+      } catch {
+        templateBlocks = [];
+      }
+
+      for (let idx = 0; idx < templateBlocks.length; idx++) {
+        const b = templateBlocks[idx];
+        const blockId = crypto.randomUUID();
+        await db.query(
+          `INSERT INTO blocks (id, page_id, type, content, checked, props, position)
+           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
+          [
+            blockId,
+            pageId,
+            b.type || 'text',
+            b.content || '',
+            b.checked || false,
+            JSON.stringify(b.props || {}),
+            idx,
+          ]
+        );
+      }
+
+      // If no blocks in template, create an empty text block
+      if (templateBlocks.length === 0) {
+        const blockId = crypto.randomUUID();
+        await db.query(
+          `INSERT INTO blocks (id, page_id, type, content, position)
+           VALUES ($1, $2, 'text', '', 0)`,
+          [blockId, pageId]
+        );
+      }
+
+      const result = await db.query('SELECT * FROM pages WHERE id = $1', [pageId]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/pages/:id/save-as-template — save a page as a template
+  router.post('/pages/:id/save-as-template', async (req, res) => {
+    try {
+      const pageResult = await db.query(
+        'SELECT * FROM pages WHERE id = $1',
+        [req.params.id]
+      );
+      if (pageResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Page not found' });
+      }
+      const page = pageResult.rows[0];
+
+      // Get all blocks for this page
+      const blocksResult = await db.query(
+        'SELECT * FROM blocks WHERE page_id = $1 ORDER BY position ASC',
+        [req.params.id]
+      );
+
+      // Serialize blocks to JSON, stripping IDs and page_id
+      const blocksJson = blocksResult.rows.map((b) => ({
+        type: b.type,
+        content: b.content || '',
+        checked: b.checked || false,
+        props: typeof b.props === 'string' ? JSON.parse(b.props || '{}') : (b.props || {}),
+      }));
+
+      // Create the template
+      const templateId = crypto.randomUUID();
+      await db.query(
+        `INSERT INTO templates (id, name, icon, blocks_json)
+         VALUES ($1, $2, $3, $4)`,
+        [templateId, page.title || 'Untitled Template', page.icon || '📋', JSON.stringify(blocksJson)]
+      );
+
+      const result = await db.query('SELECT * FROM templates WHERE id = $1', [templateId]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });

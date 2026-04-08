@@ -51,3 +51,28 @@ export async function importMarkdown(markdown, title) {
 export async function getBacklinks(pageId) {
   return apiFetch(`/pages/${pageId}/backlinks`);
 }
+
+// ============ TEMPLATES ============
+
+export async function getTemplates() {
+  return apiFetch('/templates');
+}
+
+export async function createTemplate(name, icon, blocksJson) {
+  return apiFetch('/templates', {
+    method: 'POST',
+    body: { name, icon, blocks_json: blocksJson },
+  });
+}
+
+export async function deleteTemplate(id) {
+  return apiFetch(`/templates/${id}`, { method: 'DELETE' });
+}
+
+export async function useTemplate(templateId) {
+  return apiFetch(`/templates/${templateId}/use`, { method: 'POST' });
+}
+
+export async function saveAsTemplate(pageId) {
+  return apiFetch(`/pages/${pageId}/save-as-template`, { method: 'POST' });
+}

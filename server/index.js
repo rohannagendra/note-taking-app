@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_comments_block ON comments(block_id, created_at);
+
+CREATE TABLE IF NOT EXISTS templates (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT 'Untitled Template',
+  icon TEXT DEFAULT '📋',
+  blocks_json TEXT DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 const PORT = process.env.PORT || 3001;
@@ -73,6 +81,9 @@ async function main() {
   await db.exec(SCHEMA_SQL);
   await db.exec(
     'ALTER TABLE pages ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE;'
+  );
+  await db.exec(
+    'ALTER TABLE pages ADD COLUMN IF NOT EXISTS cover_image TEXT DEFAULT NULL;'
   );
   console.log('PGlite initialized with filesystem storage at ./data/note-workspace');
 

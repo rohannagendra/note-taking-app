@@ -317,14 +317,20 @@ function escapeHtml(text) {
 }
 
 /**
- * Downloads a Markdown string as a .md file.
+ * Sanitizes a filename for download.
  */
-export function downloadMarkdown(markdown, filename) {
-  const sanitized = (filename || 'untitled')
+function sanitizeFilename(filename) {
+  return (filename || 'untitled')
     .replace(/[^a-zA-Z0-9\s\-_]/g, '')
     .replace(/\s+/g, '-')
     .toLowerCase();
+}
 
+/**
+ * Downloads a Markdown string as a .md file.
+ */
+export function downloadMarkdown(markdown, filename) {
+  const sanitized = sanitizeFilename(filename);
   const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -334,4 +340,138 @@ export function downloadMarkdown(markdown, filename) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Escapes a CSV field value. Wraps in double quotes if the value contains
+ * commas, double quotes, or newlines. Internal double quotes are doubled.
+ */
+function escapeCSVField(value) {
+  const str = String(value || '');
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+/**
+ * Converts table blocks to CSV format.
+ * If no tables exist, exports all blocks as single-column CSV (one row per block).
+ */
+export function exportTableToCSV(blocks, pageTitle) {
+  const tableBlocks = blocks.filter((b) => b.type === 'table');
+
+  if (tableBlocks.length > 0) {
+    const csvParts = [];
+    for (const block of tableBlocks) {
+      try {
+        const data = JSON.parse(block.content || '{}');
+        const headers = data.headers || [];
+        const rows = data.rows || [];
+        const lines = [];
+
+        if (headers.length > 0) {
+          lines.push(headers.map(escapeCSVField).join(','));
+          for (const row of rows) {
+            const cells = headers.map((_, i) => escapeCSVField(row[i] || ''));
+            lines.push(cells.join(','));
+          }
+        }
+        csvParts.push(lines.join('\n'));
+      } catch {
+        // Skip malformed table blocks
+      }
+    }
+    return csvParts.join('\n\n');
+  }
+
+  // No tables: export all blocks as single-column CSV
+  const lines = [];
+  if (pageTitle) {
+    lines.push(escapeCSVField(pageTitle));
+  }
+  for (const block of blocks) {
+    if (block.type === 'divider') {
+      lines.push('---');
+    } else {
+      const content = (block.content || '').replace(/<[^>]+>/g, '');
+      lines.push(escapeCSVField(content));
+    }
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Downloads a CSV string as a .csv file.
+ */
+export function downloadCSV(csvString, title) {
+  const sanitized = sanitizeFilename(title);
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitized}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Opens a print dialog with styled HTML content for PDF export.
+ * The user can choose "Save as PDF" from the browser print dialog.
+ */
+export function downloadPDF(blocks, pageTitle) {
+  const htmlContent = blocksToHtml(blocks, pageTitle);
+
+  const printCSS = `
+    @media print {
+      body { margin: 0; padding: 20mm; }
+      img { max-width: 100% !important; page-break-inside: avoid; }
+      table { page-break-inside: avoid; }
+      h1, h2, h3 { page-break-after: avoid; }
+      pre { white-space: pre-wrap; word-wrap: break-word; }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      color: rgb(55, 53, 47);
+      line-height: 1.5;
+      max-width: 708px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+  `;
+
+  const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtmlForPDF(pageTitle || 'Untitled')}</title>
+  <style>${printCSS}</style>
+</head>
+<body>
+  ${htmlContent}
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+        window.onafterprint = function() { window.close(); };
+      }, 250);
+    };
+  <\/script>
+</body>
+</html>`;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(fullHtml);
+    printWindow.document.close();
+  }
+}
+
+function escapeHtmlForPDF(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
