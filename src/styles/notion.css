@@ -2247,3 +2247,118 @@ body {
 [data-theme="dark"] .font-option.active {
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* ============ Cover Image ============ */
+.page-cover {
+  width: 100%;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.page-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.page-cover-gradient {
+  width: 100%;
+  height: 200px;
+}
+
+.page-cover-actions {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.page-cover:hover .page-cover-actions {
+  opacity: 1;
+}
+
+.cover-action-btn {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cover-action-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.add-cover-btn-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.add-cover-btn {
+  opacity: 0;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px 0;
+  background: none;
+  border: none;
+}
+
+.page-editor:hover .add-cover-btn {
+  opacity: 1;
+}
+
+.add-cover-btn:hover {
+  color: var(--text-primary);
+}
+
+.cover-gradient-picker {
+  position: absolute;
+  bottom: 40px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(15, 15, 15, 0.05), 0 3px 6px rgba(15, 15, 15, 0.1), 0 9px 24px rgba(15, 15, 15, 0.2);
+  z-index: 20;
+}
+
+.cover-gradient-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cover-gradient-swatch:hover {
+  border-color: var(--accent-blue);
+  transform: scale(1.1);
+}
+
+[data-theme="dark"] .cover-gradient-picker {
+  background: #2f2f2f;
+}
+
+[data-theme="dark"] .add-cover-btn {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme="dark"] .page-editor:hover .add-cover-btn {
+  opacity: 1;
+}
+
+[data-theme="dark"] .add-cover-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+}

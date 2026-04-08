@@ -452,6 +452,89 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
           </div>
         </div>
 
+        {/* Cover Image */}
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleCoverUpload}
+        />
+        {page.cover_image ? (
+          <div className="page-cover">
+            {page.cover_image.startsWith('linear-gradient') ? (
+              <div
+                className="page-cover-gradient"
+                style={{ background: page.cover_image }}
+              />
+            ) : (
+              <img src={page.cover_image} alt="Page cover" />
+            )}
+            <div className="page-cover-actions">
+              <button
+                className="cover-action-btn"
+                onClick={() => coverInputRef.current?.click()}
+              >
+                Change cover
+              </button>
+              <button
+                className="cover-action-btn"
+                onClick={() => setShowCoverGradients((v) => !v)}
+              >
+                Gradient
+              </button>
+              <button
+                className="cover-action-btn"
+                onClick={handleRemoveCover}
+              >
+                Remove
+              </button>
+            </div>
+            {showCoverGradients && (
+              <div className="cover-gradient-picker">
+                {GRADIENT_PRESETS.map((g, i) => (
+                  <button
+                    key={i}
+                    className="cover-gradient-swatch"
+                    style={{ background: g }}
+                    onClick={() => handleSelectGradient(g)}
+                    title={`Gradient ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="add-cover-btn-wrapper">
+            <button
+              className="add-cover-btn"
+              onClick={() => coverInputRef.current?.click()}
+            >
+              Add cover
+            </button>
+            <button
+              className="add-cover-btn"
+              onClick={() => setShowCoverGradients((v) => !v)}
+              style={{ marginLeft: 8 }}
+            >
+              Add gradient
+            </button>
+            {showCoverGradients && (
+              <div className="cover-gradient-picker" style={{ position: 'absolute', top: '100%', left: 0, zIndex: 10 }}>
+                {GRADIENT_PRESETS.map((g, i) => (
+                  <button
+                    key={i}
+                    className="cover-gradient-swatch"
+                    style={{ background: g }}
+                    onClick={() => handleSelectGradient(g)}
+                    title={`Gradient ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Page Icon */}
         <div style={{ position: 'relative' }}>
           <button
