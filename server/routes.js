@@ -1116,6 +1116,47 @@ export function createRoutes(db) {
     }
   });
 
+  // ============ ROW COMMENTS ============
+
+  // GET /api/database-rows/:id/comments
+  router.get('/database-rows/:id/comments', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM row_comments WHERE row_id = $1 ORDER BY created_at ASC',
+        [req.params.id]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/database-rows/:id/comments
+  router.post('/database-rows/:id/comments', async (req, res) => {
+    try {
+      const { content } = req.body;
+      const id = crypto.randomUUID();
+      await db.query(
+        'INSERT INTO row_comments (id, row_id, content) VALUES ($1, $2, $3)',
+        [id, req.params.id, content || '']
+      );
+      const result = await db.query('SELECT * FROM row_comments WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/row-comments/:id
+  router.delete('/row-comments/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM row_comments WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // GET /api/pages/:pageId/database — get database for a page
   router.get('/pages/:pageId/database', async (req, res) => {
     try {

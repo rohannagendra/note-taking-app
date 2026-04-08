@@ -8,6 +8,7 @@ import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
 import { getBacklinks } from '../lib/pages.js';
 import DatabaseView from './DatabaseView.jsx';
+import { getPageDatabase, getDatabaseRows } from '../lib/database.js';
 
 export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange, onSaveAsTemplate, allPages }) {
   const [blocks, setBlocks] = useState([]);
@@ -324,27 +325,47 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
     setShowCoverGradients(false);
   }, [page?.id, onUpdatePage]);
 
-  const handleExportMarkdown = useCallback(() => {
-    const md = blocksToMarkdown(blocks, page.title);
+  const fetchDatabaseData = useCallback(async () => {
+    try {
+      const db = await getPageDatabase(page.id);
+      if (db) {
+        const schema = typeof db.properties_schema === 'string'
+          ? JSON.parse(db.properties_schema)
+          : db.properties_schema || [];
+        const dbRows = await getDatabaseRows(db.id);
+        return { name: db.name, schema, rows: dbRows };
+      }
+    } catch {
+      // No database for this page
+    }
+    return null;
+  }, [page?.id]);
+
+  const handleExportMarkdown = useCallback(async () => {
+    const database = await fetchDatabaseData();
+    const md = blocksToMarkdown(blocks, page.title, database);
     downloadMarkdown(md, page.title);
     setShowExportDropdown(false);
-  }, [blocks, page?.title]);
+  }, [blocks, page?.title, fetchDatabaseData]);
 
-  const handleExportCSV = useCallback(() => {
-    const csv = exportTableToCSV(blocks, page.title);
+  const handleExportCSV = useCallback(async () => {
+    const database = await fetchDatabaseData();
+    const csv = exportTableToCSV(blocks, page.title, database);
     downloadCSV(csv, page.title);
     setShowExportDropdown(false);
-  }, [blocks, page?.title]);
+  }, [blocks, page?.title, fetchDatabaseData]);
 
-  const handleExportPDF = useCallback(() => {
-    downloadPDF(blocks, page.title);
+  const handleExportPDF = useCallback(async () => {
+    const database = await fetchDatabaseData();
+    downloadPDF(blocks, page.title, database);
     setShowExportDropdown(false);
-  }, [blocks, page?.title]);
+  }, [blocks, page?.title, fetchDatabaseData]);
 
   const handleCopy = useCallback(async () => {
     try {
-      const htmlContent = blocksToHtml(blocks, page.title);
-      const mdContent = blocksToMarkdown(blocks, page.title);
+      const database = await fetchDatabaseData();
+      const htmlContent = blocksToHtml(blocks, page.title, database);
+      const mdContent = blocksToMarkdown(blocks, page.title, database);
 
       const clipboardItem = new ClipboardItem({
         'text/html': new Blob([htmlContent], { type: 'text/html' }),
@@ -366,7 +387,7 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
         console.error('Fallback copy failed:', fallbackErr);
       }
     }
-  }, [blocks, page?.title]);
+  }, [blocks, page?.title, fetchDatabaseData]);
 
   const handleAddBlockAtEnd = useCallback(async () => {
     const lastPosition = blocks.length > 0 ? blocks[blocks.length - 1].position : -1;

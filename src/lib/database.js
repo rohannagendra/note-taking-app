@@ -51,3 +51,18 @@ export async function getPageDatabase(pageId) {
 export async function getAllDatabases() {
   return apiFetch('/databases');
 }
+
+export async function getRowComments(rowId) {
+  return apiFetch(`/database-rows/${rowId}/comments`);
+}
+
+export async function addRowComment(rowId, content) {
+  return apiFetch(`/database-rows/${rowId}/comments`, {
+    method: 'POST',
+    body: { content },
+  });
+}
+
+export async function deleteRowComment(commentId) {
+  return apiFetch(`/row-comments/${commentId}`, { method: 'DELETE' });
+}

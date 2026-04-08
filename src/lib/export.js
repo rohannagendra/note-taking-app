@@ -47,7 +47,7 @@ export function htmlToMarkdown(html) {
  * Converts an array of blocks to a Markdown string.
  * Supports all 14 block types.
  */
-export function blocksToMarkdown(blocks, pageTitle) {
+export function blocksToMarkdown(blocks, pageTitle, database) {
   let md = '';
 
   if (pageTitle) {
@@ -162,6 +162,34 @@ export function blocksToMarkdown(blocks, pageTitle) {
     prevType = block.type;
   }
 
+  // Append database data if provided
+  if (database && database.schema && database.rows) {
+    const schema = database.schema;
+    const dbRows = database.rows;
+    if (schema.length > 0 && dbRows.length > 0) {
+      md += '\n\n';
+      if (database.name) {
+        md += `## ${database.name}\n\n`;
+      }
+      const headers = schema.map((col) => col.name);
+      md += `| ${headers.join(' | ')} |\n`;
+      md += `| ${headers.map(() => '---').join(' | ')} |\n`;
+      for (const row of dbRows) {
+        const props = typeof row.properties === 'string'
+          ? JSON.parse(row.properties || '{}')
+          : row.properties || {};
+        const cells = schema.map((col) => {
+          const val = props[col.id];
+          if (val === true) return 'Yes';
+          if (val === false) return 'No';
+          return String(val || '');
+        });
+        md += `| ${cells.join(' | ')} |\n`;
+      }
+      md += '\n';
+    }
+  }
+
   // Add extra newline after list groups
   return md.replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
@@ -170,7 +198,7 @@ export function blocksToMarkdown(blocks, pageTitle) {
  * Converts an array of blocks to a formatted HTML string.
  * Includes inline styles so formatting survives paste into other apps.
  */
-export function blocksToHtml(blocks, pageTitle) {
+export function blocksToHtml(blocks, pageTitle, database) {
   const fontStyle = 'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; color: rgb(55, 53, 47); line-height: 1.5;';
   let html = `<div style="${fontStyle} max-width: 708px;">`;
 
@@ -304,6 +332,39 @@ export function blocksToHtml(blocks, pageTitle) {
     i++;
   }
 
+  // Append database data if provided
+  if (database && database.schema && database.rows) {
+    const schema = database.schema;
+    const dbRows = database.rows;
+    if (schema.length > 0 && dbRows.length > 0) {
+      if (database.name) {
+        html += `<h2 style="font-size: 24px; font-weight: 600; margin: 24px 0 8px;">${escapeHtml(database.name)}</h2>`;
+      }
+      html += '<table style="width: 100%; border-collapse: collapse; margin: 4px 0; font-size: 16px;">';
+      html += '<thead><tr>';
+      for (const col of schema) {
+        html += `<th style="border: 1px solid rgba(55,53,47,0.09); padding: 6px 10px; background: rgba(55,53,47,0.04); font-weight: 600; text-align: left;">${escapeHtml(col.name)}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      for (const row of dbRows) {
+        const props = typeof row.properties === 'string'
+          ? JSON.parse(row.properties || '{}')
+          : row.properties || {};
+        html += '<tr>';
+        for (const col of schema) {
+          const val = props[col.id];
+          let display = '';
+          if (val === true) display = 'Yes';
+          else if (val === false) display = 'No';
+          else display = String(val || '');
+          html += `<td style="border: 1px solid rgba(55,53,47,0.09); padding: 6px 10px;">${escapeHtml(display)}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+  }
+
   html += '</div>';
   return html;
 }
@@ -358,7 +419,27 @@ function escapeCSVField(value) {
  * Converts table blocks to CSV format.
  * If no tables exist, exports all blocks as single-column CSV (one row per block).
  */
-export function exportTableToCSV(blocks, pageTitle) {
+export function exportTableToCSV(blocks, pageTitle, database) {
+  // If database data is provided, export it as CSV
+  if (database && database.schema && database.rows && database.rows.length > 0) {
+    const schema = database.schema;
+    const lines = [];
+    lines.push(schema.map((col) => escapeCSVField(col.name)).join(','));
+    for (const row of database.rows) {
+      const props = typeof row.properties === 'string'
+        ? JSON.parse(row.properties || '{}')
+        : row.properties || {};
+      const cells = schema.map((col) => {
+        const val = props[col.id];
+        if (val === true) return escapeCSVField('Yes');
+        if (val === false) return escapeCSVField('No');
+        return escapeCSVField(String(val || ''));
+      });
+      lines.push(cells.join(','));
+    }
+    return lines.join('\n');
+  }
+
   const tableBlocks = blocks.filter((b) => b.type === 'table');
 
   if (tableBlocks.length > 0) {
@@ -421,8 +502,8 @@ export function downloadCSV(csvString, title) {
  * Opens a print dialog with styled HTML content for PDF export.
  * The user can choose "Save as PDF" from the browser print dialog.
  */
-export function downloadPDF(blocks, pageTitle) {
-  const htmlContent = blocksToHtml(blocks, pageTitle);
+export function downloadPDF(blocks, pageTitle, database) {
+  const htmlContent = blocksToHtml(blocks, pageTitle, database);
 
   const printCSS = `
     @media print {

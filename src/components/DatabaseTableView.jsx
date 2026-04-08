@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
+import RowComments from './RowComments.jsx';
 
 const SELECT_COLORS = {
   gray: 'var(--tag-gray)',
@@ -47,6 +48,8 @@ export default function DatabaseTableView({
   onCreateOption,
 }) {
   const saveTimers = useRef({});
+  const [commentsOpenRowId, setCommentsOpenRowId] = useState(null);
+  const [commentCounts, setCommentCounts] = useState({});
   const [menuCol, setMenuCol] = useState(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [submenu, setSubmenu] = useState(null); // 'type' | 'options' | null
@@ -280,30 +283,60 @@ export default function DatabaseTableView({
         <tbody>
           {rows.map((row) => {
             const props = row.properties || {};
+            const rowCommentCount = commentCounts[row.id] || 0;
             return (
-              <tr key={row.id} className="db-row">
-                {schema.map((col) => (
-                  <td key={col.id} className="db-cell">
-                    {renderCell(col, props[col.id], row.id, {
-                      handleCellEdit,
-                      handleCellBlur,
-                      handleCheckboxChange,
-                      handleSelectChange,
-                      handleDateChange,
-                      onCreateOption,
-                    })}
+              <React.Fragment key={row.id}>
+                <tr className="db-row">
+                  {schema.map((col) => (
+                    <td key={col.id} className="db-cell">
+                      {renderCell(col, props[col.id], row.id, {
+                        handleCellEdit,
+                        handleCellBlur,
+                        handleCheckboxChange,
+                        handleSelectChange,
+                        handleDateChange,
+                        onCreateOption,
+                      })}
+                    </td>
+                  ))}
+                  <td className="db-cell db-cell-actions">
+                    <button
+                      className="db-row-comment-btn"
+                      onClick={() => setCommentsOpenRowId(commentsOpenRowId === row.id ? null : row.id)}
+                      title="Comments"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px 4px',
+                        fontSize: '14px',
+                        color: rowCommentCount > 0 ? 'var(--accent-blue)' : 'var(--text-placeholder)',
+                        opacity: rowCommentCount > 0 ? 1 : undefined,
+                      }}
+                    >
+                      {rowCommentCount > 0 ? `\uD83D\uDCAC ${rowCommentCount}` : '\uD83D\uDCAC'}
+                    </button>
+                    <button
+                      className="db-row-delete"
+                      onClick={() => onDeleteRow(row.id)}
+                      title="Delete row"
+                    >
+                      &times;
+                    </button>
                   </td>
-                ))}
-                <td className="db-cell db-cell-actions">
-                  <button
-                    className="db-row-delete"
-                    onClick={() => onDeleteRow(row.id)}
-                    title="Delete row"
-                  >
-                    &times;
-                  </button>
-                </td>
-              </tr>
+                </tr>
+                {commentsOpenRowId === row.id && (
+                  <tr>
+                    <td colSpan={schema.length + 1} style={{ padding: 0 }}>
+                      <RowComments
+                        rowId={row.id}
+                        onClose={() => setCommentsOpenRowId(null)}
+                        onCountChange={(count) => setCommentCounts((prev) => ({ ...prev, [row.id]: count }))}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             );
           })}
         </tbody>

@@ -85,6 +85,14 @@ CREATE TABLE IF NOT EXISTS database_rows (
 );
 
 CREATE INDEX IF NOT EXISTS idx_db_rows ON database_rows(database_id, position);
+
+CREATE TABLE IF NOT EXISTS row_comments (
+  id TEXT PRIMARY KEY,
+  row_id TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_row_comments ON row_comments(row_id, created_at);
 `;
 
 const PORT = process.env.PORT || 3001;

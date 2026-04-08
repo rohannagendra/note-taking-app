@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, useState, useRef } from 'react';
+import RowComments from './RowComments.jsx';
 
 const SELECT_COLORS = {
   gray: 'var(--tag-gray)',
@@ -22,6 +23,8 @@ export default function DatabaseBoardView({
 }) {
   const [draggedCard, setDraggedCard] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
+  const [commentsOpenRowId, setCommentsOpenRowId] = useState(null);
+  const [commentCounts, setCommentCounts] = useState({});
   const dragCounter = useRef({});
 
   // Find the grouping property — first select property, or 'status'
@@ -179,33 +182,62 @@ export default function DatabaseBoardView({
             {col.rows.map((row) => {
               const props = row.properties || {};
               const title = props[titleProp?.id] || 'Untitled';
+              const rowCommentCount = commentCounts[row.id] || 0;
               return (
-                <div
-                  key={row.id}
-                  className="board-card"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, row, col.value)}
-                  onDragEnd={handleDragEnd}
-                >
-                  <div className="board-card-title">{title}</div>
-                  <div className="board-card-props">
-                    {otherProps.map((p) => {
-                      const val = props[p.id];
-                      if (!val && val !== false && val !== 0) return null;
-                      return (
-                        <div key={p.id} className="board-card-prop">
-                          {renderPropValue(p, val)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <button
-                    className="board-card-delete"
-                    onClick={() => onDeleteRow(row.id)}
-                    title="Delete"
+                <div key={row.id}>
+                  <div
+                    className="board-card"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, row, col.value)}
+                    onDragEnd={handleDragEnd}
                   >
-                    &times;
-                  </button>
+                    <div className="board-card-title">{title}</div>
+                    <div className="board-card-props">
+                      {otherProps.map((p) => {
+                        const val = props[p.id];
+                        if (!val && val !== false && val !== 0) return null;
+                        return (
+                          <div key={p.id} className="board-card-prop">
+                            {renderPropValue(p, val)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                      <button
+                        className="board-card-comment-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCommentsOpenRowId(commentsOpenRowId === row.id ? null : row.id);
+                        }}
+                        title="Comments"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          fontSize: '12px',
+                          color: rowCommentCount > 0 ? 'var(--accent-blue)' : 'var(--text-placeholder)',
+                        }}
+                      >
+                        {rowCommentCount > 0 ? `\uD83D\uDCAC ${rowCommentCount}` : '\uD83D\uDCAC'}
+                      </button>
+                    </div>
+                    <button
+                      className="board-card-delete"
+                      onClick={() => onDeleteRow(row.id)}
+                      title="Delete"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  {commentsOpenRowId === row.id && (
+                    <RowComments
+                      rowId={row.id}
+                      onClose={() => setCommentsOpenRowId(null)}
+                      onCountChange={(count) => setCommentCounts((prev) => ({ ...prev, [row.id]: count }))}
+                    />
+                  )}
                 </div>
               );
             })}
