@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDB } from '../lib/db.js';
-import { getPages, createPage, updatePage, deletePage, syncToMarkdown } from '../lib/pages.js';
+import { getPages, createPage, updatePage, deletePage, syncToMarkdown, importMarkdown } from '../lib/pages.js';
 import {
   getProjects,
   createProject,
@@ -140,6 +140,15 @@ export default function App() {
     return result;
   }, []);
 
+
+  // --- Import handler ---
+
+  const handleImport = useCallback(async (markdownText) => {
+    const newPage = await importMarkdown(markdownText);
+    setPages((prev) => [...prev, newPage]);
+    setActivePage(newPage.id);
+  }, []);
+
   // --- Sidebar toggle ---
 
   const handleToggleCollapse = useCallback(() => {
@@ -195,6 +204,7 @@ export default function App() {
         activeTagId={activeTagId}
         onSelectTag={setActiveTagId}
         onSync={handleSync}
+        onImport={handleImport}
       />
 
       {activePageObj ? (

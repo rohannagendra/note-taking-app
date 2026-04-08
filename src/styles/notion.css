@@ -1647,3 +1647,68 @@ body {
 .color-swatch.active {
   border-color: var(--accent-blue);
 }
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+[data-theme="dark"] {
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --text-placeholder: rgba(255, 255, 255, 0.3);
+  --bg-primary: #191919;
+  --bg-sidebar: #202020;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-heavy: rgba(255, 255, 255, 0.2);
+  --accent-blue: rgb(82, 156, 235);
+  --accent-blue-bg: rgba(82, 156, 235, 0.15);
+  --red: rgb(235, 87, 87);
+  --callout-bg: rgba(255, 255, 255, 0.06);
+  --code-bg: rgba(255, 255, 255, 0.1);
+  --tag-default: rgba(255, 255, 255, 0.13);
+  --tag-gray: rgba(155, 154, 151, 0.4);
+  --tag-brown: rgba(140, 46, 0, 0.4);
+  --tag-orange: rgba(245, 93, 0, 0.4);
+  --tag-yellow: rgba(233, 168, 0, 0.4);
+  --tag-green: rgba(0, 135, 107, 0.4);
+  --tag-blue: rgba(0, 120, 223, 0.4);
+  --tag-purple: rgba(103, 36, 222, 0.4);
+  --tag-pink: rgba(221, 0, 129, 0.4);
+  --tag-red: rgba(255, 0, 26, 0.4);
+}
+
+[data-theme="dark"] .slash-menu,
+[data-theme="dark"] .context-menu,
+[data-theme="dark"] .icon-picker,
+[data-theme="dark"] .formatting-toolbar,
+[data-theme="dark"] .tag-autocomplete,
+[data-theme="dark"] .mention-search {
+  background: #2f2f2f;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .page-editor-empty {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] img {
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .page-editor-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .page-editor-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .move-project-dropdown {
+  background: #2f2f2f;
+}
+
+[data-theme="dark"] .color-picker-dropdown {
+  background: #2f2f2f;
+}

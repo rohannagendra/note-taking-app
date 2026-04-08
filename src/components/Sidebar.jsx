@@ -122,6 +122,13 @@ export default function Sidebar({
           </div>
           <button
             className="sidebar-toggle"
+            onClick={onToggleTheme}
+            title="Toggle theme"
+          >
+            {theme === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'}
+          </button>
+          <button
+            className="sidebar-toggle"
             onClick={onToggleCollapse}
             title="Collapse sidebar"
           >
