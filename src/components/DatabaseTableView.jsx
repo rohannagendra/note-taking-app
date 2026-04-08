@@ -32,26 +32,94 @@ const TYPE_LABELS = {
   date: 'Date',
 };
 
-const NUMBER_FORMATS = {
-  number: { label: 'Number', example: '1234.5' },
-  currency: { label: 'Currency ($)', example: '$1,234.50' },
-  percent: { label: 'Percent', example: '12.5%' },
-  commas: { label: 'With commas', example: '1,234' },
-};
+// Aggregation options per column type
+const COMMON_AGGREGATIONS = [
+  { key: 'none', label: 'None' },
+  { key: 'count', label: 'Count' },
+  { key: 'count_values', label: 'Count values' },
+  { key: 'count_unique', label: 'Count unique' },
+  { key: 'count_empty', label: 'Count empty' },
+  { key: 'count_not_empty', label: 'Count not empty' },
+];
 
-function formatNumber(value, format) {
-  if (value === '' || value === null || value === undefined) return '';
-  const num = parseFloat(value);
-  if (isNaN(num)) return String(value);
-  switch (format) {
-    case 'currency':
-      return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    case 'percent':
-      return num + '%';
-    case 'commas':
-      return num.toLocaleString('en-US', { maximumFractionDigits: 10 });
+const NUMBER_AGGREGATIONS = [
+  { key: 'sum', label: 'Sum' },
+  { key: 'average', label: 'Average' },
+  { key: 'min', label: 'Min' },
+  { key: 'max', label: 'Max' },
+  { key: 'median', label: 'Median' },
+];
+
+const CHECKBOX_AGGREGATIONS = [
+  { key: 'checked', label: 'Checked' },
+  { key: 'unchecked', label: 'Unchecked' },
+  { key: 'percent_checked', label: 'Percent checked' },
+];
+
+function getAggregationOptions(colType) {
+  const options = [...COMMON_AGGREGATIONS];
+  if (colType === 'number') {
+    options.push(...NUMBER_AGGREGATIONS);
+  }
+  if (colType === 'checkbox') {
+    options.push(...CHECKBOX_AGGREGATIONS);
+  }
+  return options;
+}
+
+function computeAggregation(aggKey, colId, colType, rows) {
+  if (aggKey === 'none') return '';
+  const values = rows.map((r) => (r.properties || {})[colId]);
+
+  switch (aggKey) {
+    case 'count':
+      return rows.length;
+    case 'count_values':
+      return values.filter((v) => v !== undefined && v !== '' && v !== null && v !== false).length;
+    case 'count_unique': {
+      const set = new Set(values.filter((v) => v !== undefined && v !== '' && v !== null));
+      return set.size;
+    }
+    case 'count_empty':
+      return values.filter((v) => v === undefined || v === '' || v === null || v === false).length;
+    case 'count_not_empty':
+      return values.filter((v) => v !== undefined && v !== '' && v !== null && v !== false).length;
+    case 'sum': {
+      const nums = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      return nums.reduce((a, b) => a + b, 0);
+    }
+    case 'average': {
+      const nums = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      if (nums.length === 0) return 0;
+      return (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2);
+    }
+    case 'min': {
+      const nums = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      if (nums.length === 0) return '-';
+      return Math.min(...nums);
+    }
+    case 'max': {
+      const nums = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      if (nums.length === 0) return '-';
+      return Math.max(...nums);
+    }
+    case 'median': {
+      const nums = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n)).sort((a, b) => a - b);
+      if (nums.length === 0) return '-';
+      const mid = Math.floor(nums.length / 2);
+      return nums.length % 2 !== 0 ? nums[mid] : ((nums[mid - 1] + nums[mid]) / 2).toFixed(2);
+    }
+    case 'checked':
+      return values.filter((v) => v === true || v === 'true').length;
+    case 'unchecked':
+      return values.filter((v) => v !== true && v !== 'true').length;
+    case 'percent_checked': {
+      if (rows.length === 0) return '0%';
+      const checked = values.filter((v) => v === true || v === 'true').length;
+      return Math.round((checked / rows.length) * 100) + '%';
+    }
     default:
-      return String(num);
+      return '';
   }
 }
 
@@ -69,7 +137,7 @@ export default function DatabaseTableView({
   sortProp,
   sortDir,
   onCreateOption,
-  onBulkDelete,
+  onReorderProperties,
 }) {
   const saveTimers = useRef({});
   const [commentsOpenRowId, setCommentsOpenRowId] = useState(null);
@@ -82,9 +150,22 @@ export default function DatabaseTableView({
   const [colorPickerOption, setColorPickerOption] = useState(null);
   const [newOptionValue, setNewOptionValue] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [selectedRows, setSelectedRows] = useState(new Set());
   const menuRef = useRef(null);
   const renameInputRef = useRef(null);
+
+  // Column resize state
+  const [columnWidths, setColumnWidths] = useState({});
+  const resizingRef = useRef(null);
+
+  // Column drag reorder state
+  const [dragColId, setDragColId] = useState(null);
+  const [dragOverColId, setDragOverColId] = useState(null);
+  const [dragOverSide, setDragOverSide] = useState(null);
+
+  // Footer aggregation state
+  const [aggregations, setAggregations] = useState({});
+  const [aggDropdownCol, setAggDropdownCol] = useState(null);
+  const aggDropdownRef = useRef(null);
 
   // Close menu on outside click
   useEffect(() => {
@@ -106,6 +187,112 @@ export default function DatabaseTableView({
     }
   }, [renaming]);
 
+  // Close aggregation dropdown on outside click
+  useEffect(() => {
+    if (!aggDropdownCol) return;
+    const handleClick = (e) => {
+      if (aggDropdownRef.current && !aggDropdownRef.current.contains(e.target)) {
+        setAggDropdownCol(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [aggDropdownCol]);
+
+  // Column resize handlers
+  const handleResizeMouseDown = useCallback((e, colId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = e.currentTarget.parentElement;
+    const startWidth = th.offsetWidth;
+    resizingRef.current = { colId, startX: e.clientX, startWidth };
+
+    const handleMouseMove = (moveE) => {
+      if (!resizingRef.current) return;
+      const diff = moveE.clientX - resizingRef.current.startX;
+      const newWidth = Math.max(80, Math.min(500, resizingRef.current.startWidth + diff));
+      setColumnWidths((prev) => ({ ...prev, [colId]: newWidth }));
+    };
+
+    const handleMouseUp = () => {
+      resizingRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.querySelectorAll('.db-col-resize.resizing').forEach((el) => {
+        el.classList.remove('resizing');
+      });
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.currentTarget.classList.add('resizing');
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Column drag reorder handlers
+  const handleDragStart = useCallback((e, colId) => {
+    if (colId === 'title') {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', colId);
+    setDragColId(colId);
+  }, []);
+
+  const handleDragOver = useCallback((e, colId) => {
+    e.preventDefault();
+    if (!dragColId || colId === dragColId || colId === 'title') return;
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDragOverColId(colId);
+    setDragOverSide(e.clientX < midX ? 'left' : 'right');
+  }, [dragColId]);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverColId(null);
+    setDragOverSide(null);
+  }, []);
+
+  const handleDrop = useCallback((e, targetColId) => {
+    e.preventDefault();
+    if (!dragColId || dragColId === targetColId || targetColId === 'title') {
+      setDragColId(null);
+      setDragOverColId(null);
+      setDragOverSide(null);
+      return;
+    }
+
+    const newSchema = [...schema];
+    const dragIndex = newSchema.findIndex((c) => c.id === dragColId);
+    if (dragIndex === -1) return;
+
+    const [dragged] = newSchema.splice(dragIndex, 1);
+    const targetIndex = newSchema.findIndex((c) => c.id === targetColId);
+    if (targetIndex === -1) return;
+
+    const insertAt = dragOverSide === 'right' ? targetIndex + 1 : targetIndex;
+    newSchema.splice(insertAt, 0, dragged);
+
+    if (onReorderProperties) {
+      onReorderProperties(newSchema);
+    }
+
+    setDragColId(null);
+    setDragOverColId(null);
+    setDragOverSide(null);
+  }, [dragColId, dragOverSide, schema, onReorderProperties]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragColId(null);
+    setDragOverColId(null);
+    setDragOverSide(null);
+  }, []);
+
   const closeMenu = () => {
     setMenuCol(null);
     setSubmenu(null);
@@ -117,6 +304,7 @@ export default function DatabaseTableView({
   };
 
   const handleHeaderClick = (col, e) => {
+    if (e.target.classList.contains('db-col-resize')) return;
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     const wrapperRect = e.currentTarget.closest('.database-table-wrapper')?.getBoundingClientRect();
@@ -177,7 +365,6 @@ export default function DatabaseTableView({
   };
 
   const handleDelete = () => {
-    // Check if any rows have data in this column
     const hasData = rows.some((r) => {
       const val = (r.properties || {})[menuCol.id];
       return val !== undefined && val !== '' && val !== false && val !== null;
@@ -192,7 +379,6 @@ export default function DatabaseTableView({
     closeMenu();
   };
 
-  // Options editing handlers
   const handleOptionRename = (optIndex, newName) => {
     if (!menuCol || !menuCol.options) return;
     const oldValue = menuCol.options[optIndex].value;
@@ -202,7 +388,6 @@ export default function DatabaseTableView({
     if (onUpdateProperty) {
       onUpdateProperty(menuCol.id, { options: newOptions }, { renameOption: { from: oldValue, to: newName } });
     }
-    // Update local menuCol so UI reflects the change
     setMenuCol((prev) => ({ ...prev, options: newOptions }));
   };
 
@@ -277,87 +462,44 @@ export default function DatabaseTableView({
 
   const isTitle = (col) => col.id === 'title';
 
-  const allSelected = rows.length > 0 && rows.every((r) => selectedRows.has(r.id));
-  const someSelected = selectedRows.size > 0;
-
-  const handleSelectAll = () => {
-    if (allSelected) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(rows.map((r) => r.id)));
-    }
-  };
-
-  const handleSelectRow = (rowId) => {
-    setSelectedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(rowId)) {
-        next.delete(rowId);
-      } else {
-        next.add(rowId);
-      }
-      return next;
-    });
-  };
-
-  const handleBulkDelete = async () => {
-    if (onBulkDelete) {
-      await onBulkDelete(selectedRows);
-    } else {
-      for (const id of selectedRows) {
-        await onDeleteRow(id);
-      }
-    }
-    setSelectedRows(new Set());
-  };
-
   return (
     <div className="database-table-wrapper" style={{ position: 'relative' }}>
-      {someSelected && (
-        <div className="db-bulk-bar">
-          <span style={{ fontWeight: 500 }}>{selectedRows.size} selected</span>
-          <button
-            className="db-bulk-delete-btn"
-            onClick={handleBulkDelete}
-          >
-            Delete
-          </button>
-          <button
-            className="db-bulk-deselect-btn"
-            onClick={() => setSelectedRows(new Set())}
-          >
-            Deselect all
-          </button>
-        </div>
-      )}
       <table className="database-table">
         <thead>
           <tr>
-            <th className="db-th db-th-select">
-              <input
-                type="checkbox"
-                className="db-select-checkbox"
-                checked={allSelected}
-                ref={(el) => {
-                  if (el) el.indeterminate = someSelected && !allSelected;
-                }}
-                onChange={handleSelectAll}
-              />
-            </th>
-            {schema.map((col) => (
-              <th
-                key={col.id}
-                className="db-th"
-                onClick={(e) => handleHeaderClick(col, e)}
-                title={`Click to edit property "${col.name}"`}
-              >
-                <div className="db-th-content">
-                  <span className="type-icon">{TYPE_ICONS[col.type] || 'Aa'}</span>
-                  <span className="db-th-name">{col.name}</span>
-                  {renderSortIndicator(col.id)}
-                </div>
-              </th>
-            ))}
+            {schema.map((col) => {
+              const width = columnWidths[col.id];
+              let dragClass = '';
+              if (dragColId === col.id) dragClass = ' dragging';
+              if (dragOverColId === col.id && dragOverSide === 'left') dragClass += ' drag-over-left';
+              if (dragOverColId === col.id && dragOverSide === 'right') dragClass += ' drag-over-right';
+
+              return (
+                <th
+                  key={col.id}
+                  className={'db-th' + dragClass}
+                  style={width ? { width: width + 'px', minWidth: width + 'px', maxWidth: width + 'px' } : undefined}
+                  onClick={(e) => handleHeaderClick(col, e)}
+                  title={`Click to edit property "${col.name}"`}
+                  draggable={col.id !== 'title'}
+                  onDragStart={(e) => handleDragStart(e, col.id)}
+                  onDragOver={(e) => handleDragOver(e, col.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, col.id)}
+                  onDragEnd={handleDragEnd}
+                >
+                  <div className="db-th-content">
+                    <span className="type-icon">{TYPE_ICONS[col.type] || 'Aa'}</span>
+                    <span className="db-th-name">{col.name}</span>
+                    {renderSortIndicator(col.id)}
+                  </div>
+                  <div
+                    className="db-col-resize"
+                    onMouseDown={(e) => handleResizeMouseDown(e, col.id)}
+                  />
+                </th>
+              );
+            })}
             <th
               className="db-th db-th-add-property"
               onClick={() => onAddProperty && onAddProperty()}
@@ -373,27 +515,26 @@ export default function DatabaseTableView({
             const rowCommentCount = commentCounts[row.id] || 0;
             return (
               <React.Fragment key={row.id}>
-                <tr className={`db-row${selectedRows.has(row.id) ? ' db-row-selected' : ''}`}>
-                  <td className="db-cell db-cell-select-col">
-                    <input
-                      type="checkbox"
-                      className="db-select-checkbox"
-                      checked={selectedRows.has(row.id)}
-                      onChange={() => handleSelectRow(row.id)}
-                    />
-                  </td>
-                  {schema.map((col) => (
-                    <td key={col.id} className="db-cell">
-                      {renderCell(col, props[col.id], row.id, {
-                        handleCellEdit,
-                        handleCellBlur,
-                        handleCheckboxChange,
-                        handleSelectChange,
-                        handleDateChange,
-                        onCreateOption,
-                      })}
-                    </td>
-                  ))}
+                <tr className="db-row">
+                  {schema.map((col) => {
+                    const width = columnWidths[col.id];
+                    return (
+                      <td
+                        key={col.id}
+                        className="db-cell"
+                        style={width ? { width: width + 'px', minWidth: width + 'px', maxWidth: width + 'px' } : undefined}
+                      >
+                        {renderCell(col, props[col.id], row.id, {
+                          handleCellEdit,
+                          handleCellBlur,
+                          handleCheckboxChange,
+                          handleSelectChange,
+                          handleDateChange,
+                          onCreateOption,
+                        })}
+                      </td>
+                    );
+                  })}
                   <td className="db-cell db-cell-actions">
                     <button
                       className="db-row-comment-btn"
@@ -422,7 +563,7 @@ export default function DatabaseTableView({
                 </tr>
                 {commentsOpenRowId === row.id && (
                   <tr>
-                    <td colSpan={schema.length + 2} style={{ padding: 0 }}>
+                    <td colSpan={schema.length + 1} style={{ padding: 0 }}>
                       <RowComments
                         rowId={row.id}
                         onClose={() => setCommentsOpenRowId(null)}
@@ -435,6 +576,56 @@ export default function DatabaseTableView({
             );
           })}
         </tbody>
+        <tfoot className="db-footer">
+          <tr>
+            {schema.map((col) => {
+              const aggKey = aggregations[col.id] || 'count';
+              const aggOptions = getAggregationOptions(col.type);
+              const aggLabel = aggOptions.find((o) => o.key === aggKey)?.label || 'Count';
+              const aggValue = computeAggregation(aggKey, col.id, col.type, rows);
+              const width = columnWidths[col.id];
+
+              return (
+                <td
+                  key={col.id}
+                  style={width ? { width: width + 'px', minWidth: width + 'px', maxWidth: width + 'px', position: 'relative' } : { position: 'relative' }}
+                  onClick={() => setAggDropdownCol(aggDropdownCol === col.id ? null : col.id)}
+                >
+                  {aggKey !== 'none' ? (
+                    <span>
+                      <span className="aggregation-label">{aggLabel}</span>
+                      <span className="aggregation-value">{aggValue}</span>
+                    </span>
+                  ) : (
+                    <span className="aggregation-label">Calculate</span>
+                  )}
+                  {aggDropdownCol === col.id && (
+                    <div
+                      ref={aggDropdownRef}
+                      className="aggregation-dropdown"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {aggOptions.map((opt) => (
+                        <button
+                          key={opt.key}
+                          className={'aggregation-option' + (aggKey === opt.key ? ' active' : '')}
+                          onClick={() => {
+                            setAggregations((prev) => ({ ...prev, [col.id]: opt.key }));
+                            setAggDropdownCol(null);
+                          }}
+                        >
+                          {opt.label}
+                          {aggKey === opt.key && <span style={{ color: 'var(--accent-blue)' }}>&#10003;</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+            <td></td>
+          </tr>
+        </tfoot>
       </table>
       <button className="db-add-row-btn" onClick={() => onAddRow()}>
         + New row
@@ -487,39 +678,6 @@ export default function DatabaseTableView({
                 </button>
               ))}
             </div>
-          ) : submenu === 'format' ? (
-            /* Number format submenu */
-            <div className="property-menu-submenu">
-              <button
-                className="property-menu-item"
-                onClick={() => setSubmenu(null)}
-                style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}
-              >
-                ← Back
-              </button>
-              <div className="property-menu-separator" />
-              {Object.entries(NUMBER_FORMATS).map(([key, { label, example }]) => (
-                <button
-                  key={key}
-                  className="property-menu-item"
-                  onClick={() => {
-                    if (onUpdateProperty) {
-                      onUpdateProperty(menuCol.id, { format: key });
-                    }
-                    setMenuCol((prev) => ({ ...prev, format: key }));
-                    closeMenu();
-                  }}
-                >
-                  <span className="type-option">
-                    <span style={{ minWidth: '90px' }}>{label}</span>
-                    <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>{example}</span>
-                  </span>
-                  {(menuCol.format || 'number') === key && (
-                    <span style={{ marginLeft: 'auto', color: 'var(--accent-blue)' }}>✓</span>
-                  )}
-                </button>
-              ))}
-            </div>
           ) : submenu === 'options' ? (
             /* Options editor submenu */
             <div className="option-editor">
@@ -543,7 +701,6 @@ export default function DatabaseTableView({
                     className="option-name-input"
                     value={opt.value}
                     onChange={(e) => {
-                      // Local update while typing
                       const newOpts = menuCol.options.map((o, i) =>
                         i === idx ? { ...o, value: e.target.value } : o
                       );
@@ -621,15 +778,6 @@ export default function DatabaseTableView({
                   <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>→</span>
                 </button>
               )}
-              {menuCol.type === 'number' && (
-                <button className="property-menu-item" onClick={() => setSubmenu('format')}>
-                  <span style={{ width: '20px', textAlign: 'center' }}>🔢</span>
-                  Format
-                  <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                    {NUMBER_FORMATS[menuCol.format || 'number']?.label || 'Number'} →
-                  </span>
-                </button>
-              )}
               <button className="property-menu-item" onClick={() => { onSortBy && onSortBy(menuCol.id); closeMenu(); }}>
                 <span style={{ width: '20px', textAlign: 'center' }}>↕</span>
                 Sort
@@ -686,10 +834,9 @@ export default function DatabaseTableView({
   );
 }
 
-function NumberCell({ value, onEdit, onBlur, format }) {
+function NumberCell({ value, onEdit, onBlur }) {
   const ref = useRef(null);
   const [invalid, setInvalid] = useState(false);
-  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (ref.current && document.activeElement !== ref.current) {
@@ -712,16 +859,7 @@ function NumberCell({ value, onEdit, onBlur, format }) {
     }
   };
 
-  const handleFocus = () => {
-    setFocused(true);
-    // Show raw number when focused
-    if (ref.current) {
-      ref.current.innerText = value != null ? String(value) : '';
-    }
-  };
-
   const handleBlur = (e) => {
-    setFocused(false);
     const text = e.currentTarget.innerText;
     if (!validate(text)) {
       e.currentTarget.innerText = value != null ? String(value) : '';
@@ -732,11 +870,6 @@ function NumberCell({ value, onEdit, onBlur, format }) {
     onBlur(text);
   };
 
-  // Show formatted value when not focused
-  const displayValue = !focused && format && format !== 'number'
-    ? formatNumber(value, format)
-    : String(value || '');
-
   return (
     <div
       ref={ref}
@@ -744,9 +877,8 @@ function NumberCell({ value, onEdit, onBlur, format }) {
       contentEditable
       suppressContentEditableWarning
       onInput={handleInput}
-      onFocus={handleFocus}
       onBlur={handleBlur}
-      dangerouslySetInnerHTML={{ __html: escapeHtml(displayValue) }}
+      dangerouslySetInnerHTML={{ __html: escapeHtml(String(value || '')) }}
     />
   );
 }
@@ -881,7 +1013,6 @@ function renderCell(col, value, rowId, handlers) {
       return (
         <NumberCell
           value={value}
-          format={col.format}
           onEdit={(val) => handlers.handleCellEdit(rowId, col.id, val)}
           onBlur={(val) => handlers.handleCellBlur(rowId, col.id, { currentTarget: { innerText: val } })}
         />
