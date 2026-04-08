@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDB } from '../lib/db.js';
-import { getPages, createPage, updatePage, deletePage, toggleFavorite, syncToMarkdown, importMarkdown, getTemplates, useTemplate, saveAsTemplate, deleteTemplate } from '../lib/pages.js';
+import { getPages, createPage, updatePage, deletePage, toggleFavorite, syncToMarkdown, importMarkdown, getTemplates, useTemplate, saveAsTemplate, deleteTemplate, setParentPage } from '../lib/pages.js';
 import {
   getProjects,
   createProject,
@@ -181,6 +181,15 @@ export default function App() {
     setPages(prev => prev.map(p => p.id === pageId ? { ...p, is_favorite: isFavorite } : p));
   }, []);
 
+  // --- Nested page handler ---
+
+  const handleSetParentPage = useCallback(async (pageId, parentId) => {
+    await setParentPage(pageId, parentId);
+    setPages((prev) =>
+      prev.map((p) => (p.id === pageId ? { ...p, parent_id: parentId } : p))
+    );
+  }, []);
+
   // --- Template handlers ---
 
   const handleUseTemplate = useCallback(async (templateId) => {
@@ -308,6 +317,7 @@ export default function App() {
         onDeleteTemplate={handleDeleteTemplate}
         isMobile={isMobile}
         mobileSidebarOpen={mobileSidebarOpen}
+        onSetParentPage={handleSetParentPage}
       />
 
       {activePageObj ? (
@@ -321,6 +331,7 @@ export default function App() {
           fontFamily={fontFamily}
           onFontChange={setFontFamily}
           onSaveAsTemplate={handleSaveAsTemplate}
+          allPages={pages}
         />
       ) : (
         <div className="page-editor-empty">

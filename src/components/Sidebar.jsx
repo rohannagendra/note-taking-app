@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ProjectGroup from './ProjectGroup.jsx';
 import TagFilter from './TagFilter.jsx';
+import PageTree from './PageTree.jsx';
 import { searchPages } from '../lib/pages.js';
 
 export default function Sidebar({
@@ -34,6 +35,7 @@ export default function Sidebar({
   onDeleteTemplate,
   isMobile,
   mobileSidebarOpen,
+  onSetParentPage,
 }) {
   const [templatesExpanded, setTemplatesExpanded] = useState(true);
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
@@ -365,6 +367,7 @@ export default function Sidebar({
               onCreatePageInProject={onCreatePageInProject}
               onMovePageToProject={onMovePageToProject}
               onToggleFavorite={onToggleFavorite}
+              onSetParentPage={onSetParentPage}
               allProjects={sortedProjects}
             />
           ))}
@@ -406,36 +409,20 @@ export default function Sidebar({
               </div>
             </div>
 
-            {uncategorizedExpanded &&
-              uncategorizedPages.map((page) => (
-                <div
-                  key={page.id}
-                  className={`sidebar-page-item${activePage === page.id ? ' active' : ''}`}
-                  onClick={() => onSelectPage(page.id)}
-                >
-                  <span className="page-icon">{page.icon || '📄'}</span>
-                  <span className="page-title">{page.title || 'Untitled'}</span>
-                  <div className="page-actions">
-                    <button
-                      className="icon-btn"
-                      onClick={(e) => handlePageContextMenu(e, page.id)}
-                      title="Page options"
-                    >
-                      ···
-                    </button>
-                    <button
-                      className="icon-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeletePage(page.id);
-                      }}
-                      title="Delete page"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                </div>
-              ))}
+            {uncategorizedExpanded && (
+              <PageTree
+                pages={uncategorizedPages}
+                parentId={null}
+                level={0}
+                activePage={activePage}
+                onSelectPage={onSelectPage}
+                onDeletePage={onDeletePage}
+                onToggleFavorite={onToggleFavorite}
+                onMovePageToProject={onMovePageToProject}
+                onSetParentPage={onSetParentPage}
+                allProjects={sortedProjects}
+              />
+            )}
 
             {uncategorizedExpanded && uncategorizedPages.length === 0 && !searchQuery && (
               <div

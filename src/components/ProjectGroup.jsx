@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import PageTree from './PageTree.jsx';
 
 export default function ProjectGroup({
   project,
@@ -11,6 +12,7 @@ export default function ProjectGroup({
   onCreatePageInProject,
   onMovePageToProject,
   onToggleFavorite,
+  onSetParentPage,
   allProjects,
 }) {
   const [expanded, setExpanded] = useState(true);
@@ -172,35 +174,18 @@ export default function ProjectGroup({
       {/* Pages */}
       {expanded && (
         <div className="project-group-pages">
-          {pages.map((page) => (
-            <div
-              key={page.id}
-              className={`sidebar-page-item${activePage === page.id ? ' active' : ''}`}
-              onClick={() => onSelectPage(page.id)}
-            >
-              <span className="page-icon">{page.icon || '📄'}</span>
-              <span className="page-title">{page.title || 'Untitled'}</span>
-              <div className="page-actions">
-                <button
-                  className="icon-btn"
-                  onClick={(e) => handlePageContextMenu(e, page.id)}
-                  title="Page options"
-                >
-                  ···
-                </button>
-                <button
-                  className="icon-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeletePage(page.id);
-                  }}
-                  title="Delete page"
-                >
-                  &times;
-                </button>
-              </div>
-            </div>
-          ))}
+          <PageTree
+            pages={pages}
+            parentId={null}
+            level={0}
+            activePage={activePage}
+            onSelectPage={onSelectPage}
+            onDeletePage={onDeletePage}
+            onToggleFavorite={onToggleFavorite}
+            onMovePageToProject={onMovePageToProject}
+            onSetParentPage={onSetParentPage}
+            allProjects={allProjects}
+          />
 
           {pages.length === 0 && (
             <div

@@ -165,6 +165,19 @@ export function createRoutes(db) {
     }
   });
 
+  // GET /api/pages/:id/children
+  router.get('/pages/:id/children', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM pages WHERE parent_id = $1 ORDER BY position ASC',
+        [req.params.id]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // POST /api/pages
   router.post('/pages', async (req, res) => {
     try {
@@ -217,6 +230,10 @@ export function createRoutes(db) {
       if (updates.cover_image !== undefined) {
         fields.push(`cover_image = $${paramIndex++}`);
         values.push(updates.cover_image);
+      }
+      if (updates.parent_id !== undefined) {
+        fields.push(`parent_id = $${paramIndex++}`);
+        values.push(updates.parent_id);
       }
 
       fields.push(`updated_at = NOW()`);
@@ -951,6 +968,148 @@ export function createRoutes(db) {
 
       const result = await db.query('SELECT * FROM templates WHERE id = $1', [templateId]);
       res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ============ DATABASES ============
+
+  // POST /api/databases — create a database for a page
+  router.post('/databases', async (req, res) => {
+    try {
+      const { page_id, name, properties_schema } = req.body;
+      if (!page_id) return res.status(400).json({ error: 'page_id is required' });
+      const id = crypto.randomUUID();
+      await db.query(
+        `INSERT INTO databases (id, page_id, name, properties_schema)
+         VALUES ($1, $2, $3, $4)`,
+        [id, page_id, name || 'Untitled Database', JSON.stringify(properties_schema || [])]
+      );
+      const result = await db.query('SELECT * FROM databases WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/databases/:id
+  router.get('/databases/:id', async (req, res) => {
+    try {
+      const result = await db.query('SELECT * FROM databases WHERE id = $1', [req.params.id]);
+      if (result.rows.length === 0) return res.status(404).json({ error: 'Database not found' });
+      res.json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PATCH /api/databases/:id
+  router.patch('/databases/:id', async (req, res) => {
+    try {
+      const updates = req.body;
+      const fields = [];
+      const values = [];
+      let paramIndex = 1;
+      if (updates.name !== undefined) {
+        fields.push(`name = $${paramIndex++}`);
+        values.push(updates.name);
+      }
+      if (updates.properties_schema !== undefined) {
+        fields.push(`properties_schema = $${paramIndex++}`);
+        values.push(JSON.stringify(updates.properties_schema));
+      }
+      if (fields.length === 0) return res.json({ ok: true });
+      values.push(req.params.id);
+      await db.query(
+        `UPDATE databases SET ${fields.join(', ')} WHERE id = $${paramIndex}`,
+        values
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/databases/:id
+  router.delete('/databases/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM databases WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/databases/:id/rows
+  router.get('/databases/:id/rows', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM database_rows WHERE database_id = $1 ORDER BY position ASC',
+        [req.params.id]
+      );
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // POST /api/databases/:id/rows
+  router.post('/databases/:id/rows', async (req, res) => {
+    try {
+      const { properties } = req.body;
+      const id = crypto.randomUUID();
+      const posResult = await db.query(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM database_rows WHERE database_id = $1',
+        [req.params.id]
+      );
+      const position = posResult.rows[0].pos;
+      await db.query(
+        `INSERT INTO database_rows (id, database_id, properties, position)
+         VALUES ($1, $2, $3, $4)`,
+        [id, req.params.id, JSON.stringify(properties || {}), position]
+      );
+      const result = await db.query('SELECT * FROM database_rows WHERE id = $1', [id]);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // PATCH /api/database-rows/:id
+  router.patch('/database-rows/:id', async (req, res) => {
+    try {
+      const { properties } = req.body;
+      if (properties === undefined) return res.json({ ok: true });
+      await db.query(
+        'UPDATE database_rows SET properties = $1 WHERE id = $2',
+        [JSON.stringify(properties), req.params.id]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // DELETE /api/database-rows/:id
+  router.delete('/database-rows/:id', async (req, res) => {
+    try {
+      await db.query('DELETE FROM database_rows WHERE id = $1', [req.params.id]);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GET /api/pages/:pageId/database — get database for a page
+  router.get('/pages/:pageId/database', async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM databases WHERE page_id = $1 LIMIT 1',
+        [req.params.pageId]
+      );
+      if (result.rows.length === 0) return res.json(null);
+      res.json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

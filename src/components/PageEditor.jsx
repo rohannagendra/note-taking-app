@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from '../lib/blocks.js';
 import { blocksToMarkdown, blocksToHtml, downloadMarkdown, exportTableToCSV, downloadCSV, downloadPDF } from '../lib/export.js';
 import Block from './Block.jsx';
@@ -8,7 +8,7 @@ import FormattingToolbar from './FormattingToolbar.jsx';
 import { getPageTags } from '../lib/tags.js';
 import { getBacklinks } from '../lib/pages.js';
 
-export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange, onSaveAsTemplate }) {
+export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags, onNavigate, fontFamily, onFontChange, onSaveAsTemplate, allPages }) {
   const [blocks, setBlocks] = useState([]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [pageTags, setPageTags] = useState([]);
@@ -64,6 +64,22 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
     loadBacklinks();
     return () => { cancelled = true; };
   }, [page?.id]);
+
+  // Build breadcrumb trail
+  const breadcrumbs = useMemo(() => {
+    if (!page || !allPages || !page.parent_id) return [];
+    const trail = [];
+    let currentId = page.parent_id;
+    const visited = new Set();
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const parentPage = allPages.find((p) => p.id === currentId);
+      if (!parentPage) break;
+      trail.unshift(parentPage);
+      currentId = parentPage.parent_id;
+    }
+    return trail;
+  }, [page?.id, page?.parent_id, allPages]);
 
   const handleTagRefresh = useCallback(async () => {
     const tags = await getPageTags(page.id);
@@ -495,6 +511,26 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && (
+          <div className="page-breadcrumbs">
+            {breadcrumbs.map((crumb, idx) => (
+              <React.Fragment key={crumb.id}>
+                <span
+                  className="page-breadcrumb"
+                  onClick={() => onNavigate && onNavigate(crumb.id)}
+                >
+                  {crumb.icon || '\uD83D\uDCC4'} {crumb.title || 'Untitled'}
+                </span>
+                <span className="page-breadcrumb-separator">/</span>
+              </React.Fragment>
+            ))}
+            <span className="page-breadcrumb" style={{ color: 'var(--text-secondary)' }}>
+              {page.icon || '\uD83D\uDCC4'} {page.title || 'Untitled'}
+            </span>
           </div>
         )}
 

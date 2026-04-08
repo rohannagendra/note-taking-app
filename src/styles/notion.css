@@ -2362,3 +2362,13 @@ body {
 [data-theme="dark"] .add-cover-btn:hover {
   color: rgba(255, 255, 255, 0.8);
 }
+
+/* Page Tree / Nested Pages */
+.page-tree-item { display: flex; align-items: center; }
+.page-tree-toggle { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-tertiary); border-radius: 3px; flex-shrink: 0; }
+.page-tree-toggle:hover { background: var(--bg-hover); }
+.page-tree-children { }
+.page-breadcrumbs { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px; flex-wrap: wrap; }
+.page-breadcrumb { cursor: pointer; }
+.page-breadcrumb:hover { color: var(--text-primary); }
+.page-breadcrumb-separator { color: var(--text-placeholder); }

@@ -67,6 +67,24 @@ CREATE TABLE IF NOT EXISTS templates (
   blocks_json TEXT DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS databases (
+  id TEXT PRIMARY KEY,
+  page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  name TEXT NOT NULL DEFAULT 'Untitled Database',
+  properties_schema TEXT DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS database_rows (
+  id TEXT PRIMARY KEY,
+  database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,
+  properties TEXT DEFAULT '{}',
+  position INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_db_rows ON database_rows(database_id, position);
 `;
 
 const PORT = process.env.PORT || 3001;
@@ -84,6 +102,9 @@ async function main() {
   );
   await db.exec(
     'ALTER TABLE pages ADD COLUMN IF NOT EXISTS cover_image TEXT DEFAULT NULL;'
+  );
+  await db.exec(
+    'ALTER TABLE pages ADD COLUMN IF NOT EXISTS parent_id TEXT REFERENCES pages(id) ON DELETE SET NULL;'
   );
   console.log('PGlite initialized with filesystem storage at ./data/note-workspace');
 

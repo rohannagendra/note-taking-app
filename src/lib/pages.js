@@ -36,6 +36,14 @@ export async function toggleFavorite(id, isFavorite) {
   return apiFetch(`/pages/${id}`, { method: 'PATCH', body: { is_favorite: isFavorite } });
 }
 
+export async function getChildPages(parentId) {
+  return apiFetch(`/pages/${parentId}/children`);
+}
+
+export async function setParentPage(pageId, parentId) {
+  return apiFetch(`/pages/${pageId}`, { method: 'PATCH', body: { parent_id: parentId } });
+}
+
 export async function searchPages(query) {
   return apiFetch(`/pages/search?q=${encodeURIComponent(query)}`);
 }
