@@ -21,6 +21,7 @@ export default function App() {
   const [activePage, setActivePage] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState(() => localStorage.getItem('note-sort') || 'manual');
 
   // Initialize DB and load pages + projects + tags
   useEffect(() => {
