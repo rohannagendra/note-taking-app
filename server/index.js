@@ -51,6 +51,14 @@ CREATE INDEX IF NOT EXISTS idx_blocks_page ON blocks(page_id, position);
 CREATE INDEX IF NOT EXISTS idx_pages_project ON pages(project_id, position);
 CREATE INDEX IF NOT EXISTS idx_page_tags_page ON page_tags(page_id);
 CREATE INDEX IF NOT EXISTS idx_page_tags_tag ON page_tags(tag_id);
+
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT PRIMARY KEY,
+  block_id TEXT NOT NULL REFERENCES blocks(id) ON DELETE CASCADE,
+  content TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_comments_block ON comments(block_id, created_at);
 `;
 
 const PORT = process.env.PORT || 3001;
@@ -63,6 +71,9 @@ async function main() {
   // Initialize PGlite with filesystem storage
   const db = new PGlite(dataDir);
   await db.exec(SCHEMA_SQL);
+  await db.exec(
+    'ALTER TABLE pages ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE;'
+  );
   console.log('PGlite initialized with filesystem storage at ./data/note-workspace');
 
   const app = express();

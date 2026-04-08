@@ -205,6 +205,8 @@ export default function App() {
         onSelectTag={setActiveTagId}
         onSync={handleSync}
         onImport={handleImport}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
       />
 
       {activePageObj ? (
