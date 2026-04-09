@@ -4013,3 +4013,19 @@ body {
 [data-theme="dark"] .multiselect-tag-remove { color: rgba(255,255,255,0.6); }
 [data-theme="dark"] .multiselect-tag-remove:hover { color: rgba(255,255,255,1); }
 [data-theme="dark"] .sort-remove-btn:hover { color: #ff6b6b; }
+
+/* ============================================
+   MERMAID BLOCK
+   ============================================ */
+.mermaid-block { border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; margin: 4px 0; }
+.mermaid-view { padding: 16px; cursor: pointer; min-height: 60px; display: flex; align-items: center; justify-content: center; }
+.mermaid-view:hover { background: var(--bg-hover); }
+.mermaid-view svg { max-width: 100%; }
+.mermaid-edit { display: flex; flex-direction: column; }
+.mermaid-textarea { width: 100%; min-height: 120px; padding: 12px; border: none; font-family: var(--font-mono); font-size: 13px; resize: vertical; background: var(--code-bg); color: var(--text-primary); outline: none; }
+.mermaid-error { padding: 8px 12px; font-size: 12px; color: var(--red); background: rgba(235,87,87,0.08); border-top: 1px solid var(--border-default); }
+.mermaid-placeholder { color: var(--text-placeholder); font-size: 14px; cursor: pointer; padding: 24px; text-align: center; }
+.mermaid-toolbar { display: flex; justify-content: flex-end; padding: 4px 8px; border-top: 1px solid var(--border-default); background: var(--bg-hover); }
+.mermaid-toolbar button { font-size: 12px; padding: 2px 8px; border: none; border-radius: 3px; cursor: pointer; background: var(--accent-blue); color: white; }
+[data-theme="dark"] .mermaid-block { border-color: rgba(255,255,255,0.1); }
+[data-theme="dark"] .mermaid-textarea { background: rgba(255,255,255,0.06); }

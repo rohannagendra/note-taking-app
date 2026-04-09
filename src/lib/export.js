@@ -109,6 +109,10 @@ export function blocksToMarkdown(blocks, pageTitle, database) {
         md += `\`\`\`\n${block.content || ''}\n\`\`\`\n\n`;
         break;
 
+      case 'mermaid':
+        md += `\`\`\`mermaid\n${block.content || ''}\n\`\`\`\n\n`;
+        break;
+
       case 'divider':
         md += `---\n\n`;
         break;
@@ -266,6 +270,10 @@ export function blocksToHtml(blocks, pageTitle, database) {
 
       case 'code':
         html += `<pre style="background: rgba(135,131,120,0.15); border-radius: 4px; padding: 12px 16px; margin: 4px 0; overflow-x: auto;"><code style="font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; font-size: 14px;">${escapeHtml(block.content || '')}</code></pre>`;
+        break;
+
+      case 'mermaid':
+        html += `<pre style="background: rgba(135,131,120,0.15); border-radius: 4px; padding: 12px 16px; margin: 4px 0; overflow-x: auto;"><code class="language-mermaid" style="font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; font-size: 14px;">${escapeHtml(block.content || '')}</code></pre>`;
         break;
 
       case 'divider':
