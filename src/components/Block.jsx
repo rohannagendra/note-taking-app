@@ -9,6 +9,8 @@ import DividerBlock from './blocks/DividerBlock.jsx';
 import TableBlock from './blocks/TableBlock.jsx';
 import ImageBlock from './blocks/ImageBlock.jsx';
 import MentionBlock from './blocks/MentionBlock.jsx';
+import MermaidBlock from './blocks/MermaidBlock.jsx';
+const ExcalidrawBlock = React.lazy(() => import('./blocks/ExcalidrawBlock.jsx'));
 import BlockComments from './BlockComments.jsx';
 import { getComments } from '../lib/blocks.js';
 
@@ -134,6 +136,10 @@ const Block = React.forwardRef(function Block(
         return <ImageBlock {...commonProps} />;
       case 'mention':
         return <MentionBlock {...commonProps} onNavigate={onNavigate} />;
+      case 'mermaid':
+        return <MermaidBlock {...commonProps} />;
+      case 'excalidraw':
+        return <React.Suspense fallback={<div className="excalidraw-loading">Loading...</div>}><ExcalidrawBlock {...commonProps} /></React.Suspense>;
       default:
         return <TextBlock {...commonProps} />;
     }

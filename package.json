@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.3",
+    "@excalidraw/excalidraw": "^0.18.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",

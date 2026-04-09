@@ -55,6 +55,9 @@ function blocksToMarkdown(blocks, pageTitle) {
       case 'code':
         md += `\`\`\`\n${block.content || ''}\n\`\`\`\n\n`;
         break;
+      case 'mermaid':
+        md += `\`\`\`mermaid\n${block.content || ''}\n\`\`\`\n\n`;
+        break;
       case 'divider':
         md += `---\n\n`;
         break;
@@ -672,17 +675,21 @@ export function createRoutes(db) {
       const blocks = [];
       let firstH1 = null;
       let inCodeBlock = false;
+      let codeBlockType = 'code';
       let codeLines = [];
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (line.trimStart().startsWith('```')) {
           if (inCodeBlock) {
-            blocks.push({ type: 'code', content: codeLines.join('\n'), checked: false, props: {} });
+            blocks.push({ type: codeBlockType, content: codeLines.join('\n'), checked: false, props: {} });
             codeLines = [];
             inCodeBlock = false;
+            codeBlockType = 'code';
           } else {
             inCodeBlock = true;
             codeLines = [];
+            const lang = line.trimStart().slice(3).trim().toLowerCase();
+            codeBlockType = lang === 'mermaid' ? 'mermaid' : 'code';
           }
           continue;
         }
