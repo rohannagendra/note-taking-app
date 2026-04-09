@@ -185,8 +185,8 @@ export default function Sidebar({
         {/* Header */}
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <span style={{ fontSize: '18px' }}>N</span>
-            NŌTE
+            <span style={{ fontSize: '18px' }}>R</span>
+            Rohan's Dashboard
           </div>
           <button
             className="sidebar-toggle"
