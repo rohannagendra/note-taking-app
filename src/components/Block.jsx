@@ -139,7 +139,11 @@ const Block = React.forwardRef(function Block(
       case 'mermaid':
         return <MermaidBlock {...commonProps} />;
       case 'excalidraw':
-        return <React.Suspense fallback={<div className="excalidraw-loading">Loading...</div>}><ExcalidrawBlock {...commonProps} /></React.Suspense>;
+        return (
+          <React.Suspense fallback={<div className="excalidraw-loading">Loading...</div>}>
+            <ExcalidrawBlock {...commonProps} />
+          </React.Suspense>
+        );
       default:
         return <TextBlock {...commonProps} />;
     }
