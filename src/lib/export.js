@@ -158,6 +158,10 @@ export function blocksToMarkdown(blocks, pageTitle, database) {
         break;
       }
 
+      case 'excalidraw':
+        md += `\`\`\`excalidraw\n${block.content || '{}'}\n\`\`\`\n\n`;
+        break;
+
       default:
         md += `${c}\n\n`;
         break;
@@ -331,6 +335,10 @@ export function blocksToHtml(blocks, pageTitle, database) {
         html += `<div style="display: inline-block; background: rgba(35,131,226,0.08); border-radius: 4px; padding: 2px 6px; margin: 2px 0; font-size: 16px;">${icon} ${escapeHtml(title)}</div>`;
         break;
       }
+
+      case 'excalidraw':
+        html += `<div style="border: 1px solid rgba(55,53,47,0.09); border-radius: 6px; padding: 16px; margin: 4px 0; text-align: center; color: rgba(55,53,47,0.45); font-size: 14px;">[Excalidraw Drawing]</div>`;
+        break;
 
       default:
         html += `<p style="font-size: 16px; margin: 2px 0;">${escapeHtml(block.content || '')}</p>`;

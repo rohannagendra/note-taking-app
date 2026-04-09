@@ -4029,3 +4029,19 @@ body {
 .mermaid-toolbar button { font-size: 12px; padding: 2px 8px; border: none; border-radius: 3px; cursor: pointer; background: var(--accent-blue); color: white; }
 [data-theme="dark"] .mermaid-block { border-color: rgba(255,255,255,0.1); }
 [data-theme="dark"] .mermaid-textarea { background: rgba(255,255,255,0.06); }
+
+/* ============================================
+   EXCALIDRAW BLOCK
+   ============================================ */
+.excalidraw-block { border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; margin: 4px 0; }
+.excalidraw-view { cursor: pointer; min-height: 100px; display: flex; align-items: center; justify-content: center; padding: 8px; }
+.excalidraw-view:hover { background: var(--bg-hover); }
+.excalidraw-view svg { max-width: 100%; max-height: 400px; }
+.excalidraw-editor { height: 500px; position: relative; }
+.excalidraw-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; border-top: 1px solid var(--border-default); background: var(--bg-hover); gap: 6px; }
+.excalidraw-toolbar button { font-size: 12px; padding: 4px 12px; border: none; border-radius: 3px; cursor: pointer; }
+.excalidraw-done-btn { background: var(--accent-blue); color: white; }
+.excalidraw-cancel-btn { background: var(--bg-active); color: var(--text-primary); }
+.excalidraw-placeholder { color: var(--text-placeholder); font-size: 14px; cursor: pointer; padding: 32px; text-align: center; }
+.excalidraw-loading { padding: 24px; text-align: center; color: var(--text-tertiary); }
+[data-theme="dark"] .excalidraw-block { border-color: rgba(255,255,255,0.1); }

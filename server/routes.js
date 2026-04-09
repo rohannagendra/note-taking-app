@@ -97,6 +97,9 @@ function blocksToMarkdown(blocks, pageTitle) {
         md += `[[${title}]]\n\n`;
         break;
       }
+      case 'excalidraw':
+        md += `\`\`\`excalidraw\n${block.content || '{}'}\n\`\`\`\n\n`;
+        break;
       default:
         md += `${block.content || ''}\n\n`;
         break;
@@ -689,7 +692,7 @@ export function createRoutes(db) {
             inCodeBlock = true;
             codeLines = [];
             const lang = line.trimStart().slice(3).trim().toLowerCase();
-            codeBlockType = lang === 'mermaid' ? 'mermaid' : 'code';
+            codeBlockType = lang === 'mermaid' ? 'mermaid' : lang === 'excalidraw' ? 'excalidraw' : 'code';
           }
           continue;
         }
