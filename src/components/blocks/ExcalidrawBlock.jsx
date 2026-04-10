@@ -133,7 +133,7 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
   // VIEW mode
   if (mode === 'view') {
     return (
-      <div className="excalidraw-block" ref={containerRef}>
+      <div className="excalidraw-block-view" ref={containerRef}>
         <div className="excalidraw-view" onClick={handleClickPreview} title="Click to edit drawing">
           {hasDrawing && svgPreview ? (
             <div dangerouslySetInnerHTML={{ __html: svgPreview }} />
