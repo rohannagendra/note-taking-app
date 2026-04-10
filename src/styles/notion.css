@@ -4045,3 +4045,9 @@ body {
 .excalidraw-placeholder { color: var(--text-placeholder); font-size: 14px; cursor: pointer; padding: 32px; text-align: center; }
 .excalidraw-loading { padding: 24px; text-align: center; color: var(--text-tertiary); }
 [data-theme="dark"] .excalidraw-block { border-color: rgba(255,255,255,0.1); }
+
+/* Block delete button */
+.block-actions-left { display: flex; align-items: center; gap: 2px; position: absolute; left: -52px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity 0.1s; }
+.block-wrapper:hover .block-actions-left { opacity: 1; }
+.block-delete-btn { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: none; background: none; cursor: pointer; color: var(--text-placeholder); border-radius: 3px; font-size: 16px; padding: 0; line-height: 1; }
+.block-delete-btn:hover { background: rgba(235,87,87,0.1); color: var(--red); }

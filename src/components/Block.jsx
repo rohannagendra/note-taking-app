@@ -158,12 +158,21 @@ const Block = React.forwardRef(function Block(
       onDrop={handleDrop}
       onDragEnd={handleDragEnd}
     >
-      <span
-        className="drag-handle"
-        aria-hidden="true"
-        draggable
-        onDragStart={handleDragStart}
-      >&#x2801;&#x2802;</span>
+      <div className="block-actions-left">
+        <button
+          className="block-delete-btn"
+          onClick={() => onDelete(block.id)}
+          title="Delete block"
+        >
+          &times;
+        </button>
+        <span
+          className="drag-handle"
+          aria-hidden="true"
+          draggable
+          onDragStart={handleDragStart}
+        >&#x2801;&#x2802;</span>
+      </div>
       <div className="block-content">
         {renderBlock()}
       </div>
