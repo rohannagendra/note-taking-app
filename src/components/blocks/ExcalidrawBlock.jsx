@@ -151,8 +151,12 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
   // EDIT mode
   return (
     <div className="excalidraw-block" ref={containerRef}>
+      <div className="excalidraw-toolbar" style={{ borderTop: 'none', borderBottom: '1px solid var(--border-default)' }}>
+        <button className="excalidraw-cancel-btn" onClick={handleCancel}>Cancel</button>
+        <button className="excalidraw-done-btn" onClick={handleDone}>Done</button>
+      </div>
       <React.Suspense fallback={<div className="excalidraw-loading">Loading drawing editor...</div>}>
-        <div className="excalidraw-editor">
+        <div className="excalidraw-editor" style={{ width: '100%', height: '600px' }}>
           <ExcalidrawComp
             initialData={{
               elements: data.elements || [],
@@ -166,10 +170,6 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
           />
         </div>
       </React.Suspense>
-      <div className="excalidraw-toolbar">
-        <button className="excalidraw-cancel-btn" onClick={handleCancel}>Cancel</button>
-        <button className="excalidraw-done-btn" onClick={handleDone}>Done</button>
-      </div>
     </div>
   );
 }
