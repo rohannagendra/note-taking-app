@@ -67,15 +67,18 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
   }, [mode, hasDrawing, block.content]);
 
   // Save drawing data
-  const saveDrawing = useCallback(() => {
-    if (!excalidrawAPI) return;
+  const saveDrawing = useCallback(async () => {
+    if (!excalidrawAPI) return null;
     const elements = excalidrawAPI.getSceneElements();
     const appState = excalidrawAPI.getAppState();
+    // Deep clone via JSON to strip proxies/methods
+    const cleanElements = JSON.parse(JSON.stringify(elements));
     const content = JSON.stringify({
-      elements: elements.map((el) => ({ ...el })),
+      elements: cleanElements,
       appState: { viewBackgroundColor: appState.viewBackgroundColor || '#ffffff' },
     });
-    onUpdate(block.id, { content });
+    await onUpdate(block.id, { content });
+    return content;
   }, [excalidrawAPI, block.id, onUpdate]);
 
   // Debounced onChange handler
@@ -86,8 +89,9 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
         if (!excalidrawAPI) return;
         const sceneElements = excalidrawAPI.getSceneElements();
         const currentState = excalidrawAPI.getAppState();
+        const cleanElements = JSON.parse(JSON.stringify(sceneElements));
         const content = JSON.stringify({
-          elements: sceneElements.map((el) => ({ ...el })),
+          elements: cleanElements,
           appState: { viewBackgroundColor: currentState.viewBackgroundColor || '#ffffff' },
         });
         onUpdate(block.id, { content });
@@ -106,11 +110,12 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
   // Handle Escape key to exit edit mode
   useEffect(() => {
     if (mode !== 'edit') return;
-    const handleKeyDown = (e) => {
+    const handleKeyDown = async (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        saveDrawing();
+        clearTimeout(saveTimer.current);
+        await saveDrawing();
         setMode('view');
       }
     };
@@ -118,8 +123,9 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mode, saveDrawing]);
 
-  const handleDone = useCallback(() => {
-    saveDrawing();
+  const handleDone = useCallback(async () => {
+    clearTimeout(saveTimer.current);
+    await saveDrawing();
     setMode('view');
   }, [saveDrawing]);
 
