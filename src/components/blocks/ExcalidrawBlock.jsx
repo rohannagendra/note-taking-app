@@ -68,9 +68,13 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
 
   // Save drawing data
   const saveDrawing = useCallback(async () => {
-    if (!excalidrawAPI) return null;
+    if (!excalidrawAPI) {
+      console.warn('Excalidraw API not ready, cannot save');
+      return null;
+    }
     const elements = excalidrawAPI.getSceneElements();
     const appState = excalidrawAPI.getAppState();
+    console.log('[Excalidraw] Saving', elements.length, 'elements');
     // Deep clone via JSON to strip proxies/methods
     const cleanElements = JSON.parse(JSON.stringify(elements));
     const content = JSON.stringify({
@@ -94,10 +98,20 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
       console.warn('Failed to generate SVG snapshot:', err);
     }
 
-    await onUpdate(block.id, {
-      content,
-      props: { ...(block.props || {}), svg_snapshot: svgSnapshot },
-    });
+    // Parse existing props (may be string from DB)
+    const existingProps = typeof block.props === 'string'
+      ? (() => { try { return JSON.parse(block.props); } catch { return {}; } })()
+      : (block.props || {});
+
+    try {
+      await onUpdate(block.id, {
+        content,
+        props: { ...existingProps, svg_snapshot: svgSnapshot },
+      });
+      console.log('[Excalidraw] Saved successfully');
+    } catch (err) {
+      console.error('[Excalidraw] Save failed:', err);
+    }
     return content;
   }, [excalidrawAPI, block.id, block.props, onUpdate]);
 
