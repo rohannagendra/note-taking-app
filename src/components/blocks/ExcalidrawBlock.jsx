@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import '@excalidraw/excalidraw/index.css';
 
 const ExcalidrawComp = React.lazy(() =>
   import('@excalidraw/excalidraw').then((mod) => ({ default: mod.Excalidraw }))
