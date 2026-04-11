@@ -77,9 +77,29 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
       elements: cleanElements,
       appState: { viewBackgroundColor: appState.viewBackgroundColor || '#ffffff' },
     });
-    await onUpdate(block.id, { content });
+
+    // Generate SVG snapshot for export/sync
+    let svgSnapshot = '';
+    try {
+      if (cleanElements.length > 0) {
+        const exportToSvg = await getExportToSvg();
+        const svg = await exportToSvg({
+          elements: cleanElements,
+          appState: { ...appState, exportWithDarkMode: false },
+          files: null,
+        });
+        svgSnapshot = svg.outerHTML;
+      }
+    } catch (err) {
+      console.warn('Failed to generate SVG snapshot:', err);
+    }
+
+    await onUpdate(block.id, {
+      content,
+      props: { ...(block.props || {}), svg_snapshot: svgSnapshot },
+    });
     return content;
-  }, [excalidrawAPI, block.id, onUpdate]);
+  }, [excalidrawAPI, block.id, block.props, onUpdate]);
 
   // Debounced onChange handler
   const handleChange = useCallback(

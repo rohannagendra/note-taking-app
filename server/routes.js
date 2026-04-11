@@ -98,7 +98,11 @@ function blocksToMarkdown(blocks, pageTitle) {
         break;
       }
       case 'excalidraw':
-        md += `\`\`\`excalidraw\n${block.content || '{}'}\n\`\`\`\n\n`;
+        if (block._svg_filename) {
+          md += `![Drawing](./drawings/${block._svg_filename})\n\n`;
+        } else {
+          md += `\`\`\`excalidraw\n${block.content || '{}'}\n\`\`\`\n\n`;
+        }
         break;
       default:
         md += `${block.content || ''}\n\n`;
@@ -782,12 +786,21 @@ export function createRoutes(db) {
   router.post('/sync', async (req, res) => {
     try {
       const markdownDir = path.resolve('./data/markdown');
+      const drawingsDir = path.resolve('./data/markdown/drawings');
       fs.mkdirSync(markdownDir, { recursive: true });
+      fs.mkdirSync(drawingsDir, { recursive: true });
 
       // Clear existing markdown files
       const existingFiles = fs.readdirSync(markdownDir).filter((f) => f.endsWith('.md'));
       for (const file of existingFiles) {
         fs.unlinkSync(path.join(markdownDir, file));
+      }
+      // Clear existing drawings
+      if (fs.existsSync(drawingsDir)) {
+        const oldDrawings = fs.readdirSync(drawingsDir).filter((f) => f.endsWith('.svg'));
+        for (const file of oldDrawings) {
+          fs.unlinkSync(path.join(drawingsDir, file));
+        }
       }
 
       // Get all pages
@@ -797,6 +810,7 @@ export function createRoutes(db) {
       const pages = pagesResult.rows;
 
       const writtenFiles = [];
+      let drawingCount = 0;
 
       for (const page of pages) {
         // Get blocks for this page
@@ -805,6 +819,25 @@ export function createRoutes(db) {
           [page.id]
         );
         const blocks = blocksResult.rows;
+
+        // Extract Excalidraw SVGs to drawings/ directory
+        const pageSlug = sanitizeFilename(page.title);
+        let drawingIdx = 0;
+        for (const block of blocks) {
+          if (block.type === 'excalidraw') {
+            const props = typeof block.props === 'string'
+              ? (() => { try { return JSON.parse(block.props); } catch { return {}; } })()
+              : (block.props || {});
+            if (props.svg_snapshot) {
+              drawingIdx += 1;
+              const svgFilename = `${pageSlug}-drawing-${drawingIdx}.svg`;
+              fs.writeFileSync(path.join(drawingsDir, svgFilename), props.svg_snapshot, 'utf-8');
+              // Mutate block content to reference the file (for markdown link)
+              block._svg_filename = svgFilename;
+              drawingCount += 1;
+            }
+          }
+        }
 
         const markdown = blocksToMarkdown(blocks, page.title);
         const filename = sanitizeFilename(page.title) + '.md';
@@ -825,6 +858,7 @@ export function createRoutes(db) {
       res.json({
         success: true,
         count: writtenFiles.length,
+        drawings: drawingCount,
         path: './data/markdown/',
       });
     } catch (err) {
