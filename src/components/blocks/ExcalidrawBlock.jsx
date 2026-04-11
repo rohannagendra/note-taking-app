@@ -217,6 +217,23 @@ export default function ExcalidrawBlock({ block, onUpdate, onDelete, onAddBlock 
               }}
               onChange={handleChange}
               excalidrawAPI={(api) => setExcalidrawAPI(api)}
+              UIOptions={{
+                canvasActions: {
+                  loadScene: false,
+                  saveToActiveFile: false,
+                  export: false,
+                  saveAsImage: false,
+                  toggleTheme: true,
+                  clearCanvas: true,
+                  changeViewBackgroundColor: true,
+                },
+                tools: {
+                  image: false,
+                },
+                welcomeScreen: false,
+              }}
+              libraryReturnUrl=""
+              detectScroll={false}
             />
           </div>
         </React.Suspense>
