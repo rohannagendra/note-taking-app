@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+
 /**
  * Converts inline HTML formatting tags to Markdown syntax.
  * Handles: <b>/<strong>, <i>/<em>, <u>, <s>/<strike>/<del>, <code>, <a href>
@@ -155,6 +157,18 @@ export function blocksToMarkdown(blocks, pageTitle, database) {
         const props = typeof block.props === 'string' ? JSON.parse(block.props || '{}') : (block.props || {});
         const title = props.page_title || 'Untitled';
         md += `[[${title}]]\n\n`;
+        break;
+      }
+
+      case 'file': {
+        const fprops = typeof block.props === 'string' ? JSON.parse(block.props || '{}') : (block.props || {});
+        const fname = fprops.file_name || 'attachment';
+        const fsize = fprops.file_size || 0;
+        const fmime = fprops.mime_type || '';
+        const sizeStr = fsize < 1024 ? `${fsize} B`
+          : fsize < 1024 * 1024 ? `${(fsize / 1024).toFixed(1)} KB`
+          : `${(fsize / (1024 * 1024)).toFixed(1)} MB`;
+        md += `[${fname}](attachments/${fname}) (${sizeStr}, ${fmime || 'file'})\n\n`;
         break;
       }
 
@@ -336,6 +350,22 @@ export function blocksToHtml(blocks, pageTitle, database) {
         break;
       }
 
+      case 'file': {
+        const fprops = typeof block.props === 'string' ? JSON.parse(block.props || '{}') : (block.props || {});
+        const fname = fprops.file_name || 'attachment';
+        const fsize = fprops.file_size || 0;
+        const fmime = fprops.mime_type || '';
+        const sizeStr = fsize < 1024 ? `${fsize} B`
+          : fsize < 1024 * 1024 ? `${(fsize / 1024).toFixed(1)} KB`
+          : `${(fsize / (1024 * 1024)).toFixed(1)} MB`;
+        const fileSrc = block.content || '#';
+        html += `<div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid rgba(55,53,47,0.09); border-radius: 4px; margin: 4px 0; font-size: 14px;">`;
+        html += `<span style="font-size: 20px;">\uD83D\uDCCE</span>`;
+        html += `<div><a href="${fileSrc}" download="${escapeHtml(fname)}" style="color: rgb(35,131,226); text-decoration: none; font-weight: 500;">${escapeHtml(fname)}</a>`;
+        html += `<div style="color: rgba(55,53,47,0.45); font-size: 12px;">${sizeStr}${fmime ? ' \u2022 ' + escapeHtml(fmime.split('/').pop().toUpperCase()) : ''}</div></div></div>`;
+        break;
+      }
+
       case 'excalidraw':
         html += `<div style="border: 1px solid rgba(55,53,47,0.09); border-radius: 6px; padding: 16px; margin: 4px 0; text-align: center; color: rgba(55,53,47,0.45); font-size: 14px;">[Excalidraw Drawing]</div>`;
         break;
@@ -413,6 +443,76 @@ export function downloadMarkdown(markdown, filename) {
   const a = document.createElement('a');
   a.href = url;
   a.download = `${sanitized}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Converts a base64 data URL to a Uint8Array of raw bytes.
+ */
+function dataURLToBytes(dataURL) {
+  const base64 = dataURL.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+/**
+ * Downloads Markdown + file attachments as a .zip file.
+ * File blocks are extracted into an attachments/ folder and
+ * the Markdown references them with relative paths.
+ * Falls back to plain .md download if there are no file blocks.
+ */
+export async function downloadMarkdownWithAttachments(markdown, blocks, filename) {
+  const fileBlocks = blocks.filter((b) => b.type === 'file' && b.content);
+
+  // No file blocks — just download the .md
+  if (fileBlocks.length === 0) {
+    downloadMarkdown(markdown, filename);
+    return;
+  }
+
+  const sanitized = sanitizeFilename(filename);
+  const zip = new JSZip();
+  const attachmentsFolder = zip.folder('attachments');
+
+  // Add the markdown file at the root
+  zip.file(`${sanitized}.md`, markdown);
+
+  // Track filenames to handle duplicates
+  const usedNames = new Set();
+
+  for (const block of fileBlocks) {
+    const props = typeof block.props === 'string'
+      ? JSON.parse(block.props || '{}')
+      : (block.props || {});
+    let fname = props.file_name || 'attachment';
+
+    // Deduplicate filenames
+    if (usedNames.has(fname)) {
+      const dotIdx = fname.lastIndexOf('.');
+      const base = dotIdx > 0 ? fname.slice(0, dotIdx) : fname;
+      const ext = dotIdx > 0 ? fname.slice(dotIdx) : '';
+      let counter = 1;
+      while (usedNames.has(`${base}-${counter}${ext}`)) counter++;
+      fname = `${base}-${counter}${ext}`;
+    }
+    usedNames.add(fname);
+
+    const bytes = dataURLToBytes(block.content);
+    attachmentsFolder.file(fname, bytes);
+  }
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${sanitized}.zip`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

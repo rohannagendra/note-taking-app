@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getBlocks, addBlock, updateBlock, deleteBlock, reorderBlocks } from '../lib/blocks.js';
-import { blocksToMarkdown, blocksToHtml, downloadMarkdown, exportTableToCSV, downloadCSV, downloadPDF } from '../lib/export.js';
+import { blocksToMarkdown, blocksToHtml, downloadMarkdown, downloadMarkdownWithAttachments, exportTableToCSV, downloadCSV, downloadPDF } from '../lib/export.js';
 import Block from './Block.jsx';
 import IconPicker from './IconPicker.jsx';
 import TagInput from './TagInput.jsx';
@@ -344,7 +344,7 @@ export default function PageEditor({ page, onUpdatePage, allTags, onRefreshTags,
   const handleExportMarkdown = useCallback(async () => {
     const database = await fetchDatabaseData();
     const md = blocksToMarkdown(blocks, page.title, database);
-    downloadMarkdown(md, page.title);
+    await downloadMarkdownWithAttachments(md, blocks, page.title);
     setShowExportDropdown(false);
   }, [blocks, page?.title, fetchDatabaseData]);
 

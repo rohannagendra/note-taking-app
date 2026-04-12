@@ -15,13 +15,14 @@ const MENU_ITEMS = [
   { type: 'table',   icon: '\u229E',  label: 'Table',          desc: 'Editable table grid' },
   { type: 'image',   icon: '\u{1F5BC}',  label: 'Image',          desc: 'Upload or embed image' },
   { type: 'mention', icon: '\u{1F4C4}',  label: 'Page Mention',   desc: 'Link to another page' },
+  { type: 'file',     icon: '\u{1F4CE}',  label: 'File',             desc: 'Attach a file' },
   { type: 'database', icon: '\u{1F5C2}',  label: 'Database',        desc: 'Structured data with views' },
   { type: 'mermaid',  icon: '\u25C8',  label: 'Mermaid Diagram',  desc: 'Flowcharts, sequences, etc.' },
   { type: 'excalidraw', icon: '\u270F\uFE0F',  label: 'Drawing',          desc: 'Excalidraw whiteboard' },
 ];
 
 // Block types that should create a new block instead of converting the current one
-const CREATE_NEW_TYPES = new Set(['divider', 'table', 'image', 'mention', 'database', 'mermaid', 'excalidraw']);
+const CREATE_NEW_TYPES = new Set(['divider', 'table', 'image', 'file', 'mention', 'database', 'mermaid', 'excalidraw']);
 
 export default function SlashMenu({ position, onSelect, onClose, filter }) {
   const [activeIndex, setActiveIndex] = useState(0);
